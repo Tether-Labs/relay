@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Relay — Share AI experiences securely</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --card: #18181b;
+      --text: #fafafa;
+      --muted: #a1a1aa;
+      --accent: #818cf8;
+      --border: #27272a;
+      --green: #4ade80;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font: 16px/1.65 system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 48px 20px 96px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    .pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid #312e81;
+      background: #1e1b4b;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    h1 {
+      font-size: clamp(32px, 6vw, 48px);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin: 16px 0;
+    }
+    .lead { font-size: 18px; color: var(--muted); margin-bottom: 32px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    h2 { font-size: 18px; margin-bottom: 12px; }
+    p { color: var(--muted); margin-bottom: 12px; }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .step {
+      background: #0f0f14;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+      font-size: 13px;
+    }
+    .step strong { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+    .arrow { color: #52525b; text-align: center; font-size: 20px; margin: 8px 0; display: none; }
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    @media (max-width: 560px) { .compare { grid-template-columns: 1fr; } }
+    .bad, .good {
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 14px;
+    }
+    .bad { background: #450a0a; border: 1px solid #7f1d1d; }
+    .bad li { color: #fca5a5; margin-left: 18px; }
+    .good { background: #052e16; border: 1px solid #166534; }
+    .good li { color: #86efac; margin-left: 18px; }
+    .toggle-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+    .toggle {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+    }
+    .toggle.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .url-demo {
+      font-family: ui-monospace, monospace;
+      font-size: 14px;
+      background: #0f0f14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--green);
+      margin: 12px 0;
+    }
+    .cta {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 12px 20px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .meta { font-size: 13px; color: #71717a; margin-top: 24px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <span class="pill">You are viewing a live Relay</span>
+    <h1>Google Docs for AI experiences</h1>
+    <p class="lead">
+      This page is an AI-style interactive report — not a PDF, not a screenshot.
+      It was published to a share link in one click. You're experiencing the product right now.
+    </p>
+
+    <div class="card">
+      <h2>The problem</h2>
+      <div class="compare">
+        <div class="bad">
+          <strong>Without Relay</strong>
+          <ul>
+            <li>Export PDF (loses interactivity)</li>
+            <li>Upload to Drive (no analytics)</li>
+            <li>Send screenshots (embarrassing)</li>
+          </ul>
+        </div>
+        <div class="good">
+          <strong>With Relay</strong>
+          <ul>
+            <li>Publish HTML as-is</li>
+            <li>Share one link</li>
+            <li>Control who sees it</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>How it works</h2>
+      <div class="flow">
+        <div class="step"><strong>Generate</strong>Claude Code / Cursor</div>
+        <div class="step"><strong>Publish</strong>HTML or zip</div>
+        <div class="step"><strong>Share</strong>Secure URL</div>
+        <div class="step"><strong>Track</strong>Views + access</div>
+      </div>
+      <div class="url-demo" id="url">experience.so/a/demo</div>
+      <p>Click a permission mode to see what recipients experience:</p>
+      <div class="toggle-row">
+        <button class="toggle active" data-mode="public">Public</button>
+        <button class="toggle" data-mode="private">Private</button>
+        <button class="toggle" data-mode="restricted">Restricted</button>
+      </div>
+      <div id="public" class="panel active">
+        <p><strong>Public</strong> — anyone with the link can view. Great for reports, portfolios, Product Hunt demos.</p>
+      </div>
+      <div id="private" class="panel">
+        <p><strong>Private</strong> — only you until you change it. Draft mode for work-in-progress agent outputs.</p>
+      </div>
+      <div id="restricted" class="panel">
+        <p><strong>Restricted</strong> — invite specific emails. Client deliverables, internal research, NDAs.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Weekend V1</h2>
+      <p>Magic link auth · upload HTML · permissions · analytics · CLI for developers.</p>
+      <a class="cta" href="/">Publish your own experience →</a>
+    </div>
+
+    <p class="meta">Built this weekend · Tether Labs · Share AI-generated experiences securely</p>
+  </div>
+
+  <script>
+    document.querySelectorAll('.toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.toggle').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.mode).classList.add('active');
+      });
+    });
+    const slug = location.pathname.split('/').pop();
+    if (slug) document.getElementById('url').textContent = location.host + '/a/' + slug;
+  </script>
+</body>
+</html>

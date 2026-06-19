@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Month-End Financial Report — May 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=IBM+Plex+Serif:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #f8f7f4;
+      --paper: #fffffe;
+      --ink: #1a1a1a;
+      --muted: #6b6b6b;
+      --border: #e8e6e1;
+      --accent: #0f4c5c;
+      --green: #0d7a4e;
+      --red: #b42318;
+      --amber: #b54708;
+      --row-alt: #faf9f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font: 15px/1.6 "DM Sans", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      padding: 32px 20px 64px;
+    }
+    .report {
+      max-width: 880px;
+      margin: 0 auto;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 12px 40px rgba(0,0,0,0.03);
+    }
+    .header {
+      padding: 36px 40px 28px;
+      border-bottom: 2px solid var(--ink);
+    }
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .company {
+      font-family: "IBM Plex Serif", Georgia, serif;
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    .confidential {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 2px;
+    }
+    h1 {
+      font-family: "IBM Plex Serif", Georgia, serif;
+      font-size: clamp(26px, 4vw, 34px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      margin-top: 20px;
+      line-height: 1.2;
+    }
+    .period {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .period strong { color: var(--ink); font-weight: 600; }
+    .body { padding: 32px 40px 40px; }
+    .section { margin-bottom: 36px; }
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+    }
+    .kpi {
+      padding: 18px 20px;
+      background: var(--row-alt);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .kpi-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+    .kpi-delta {
+      font-size: 12px;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+    .kpi-delta.up { color: var(--green); }
+    .kpi-delta.down { color: var(--red); }
+    .kpi-delta.flat { color: var(--muted); }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .tab {
+      padding: 8px 14px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--paper);
+      color: var(--muted);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .tab:hover { border-color: var(--accent); color: var(--ink); }
+    .tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+    }
+    th { font-weight: 600; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    th:first-child, td:first-child { text-align: left; }
+    tr:nth-child(even) td { background: var(--row-alt); }
+    tr.total td {
+      font-weight: 700;
+      border-top: 2px solid var(--ink);
+      border-bottom: none;
+      background: transparent !important;
+    }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+    .chart { margin: 8px 0 4px; }
+    .chart-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    .chart-label { width: 100px; flex-shrink: 0; color: var(--muted); }
+    .chart-track {
+      flex: 1;
+      height: 24px;
+      background: var(--row-alt);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    .chart-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      width: 0;
+      transition: width 0.7s ease;
+    }
+    .chart-fill.plan { background: #c4d4d8; position: absolute; top: 0; left: 0; opacity: 0.5; }
+    .chart-val { width: 72px; text-align: right; font-weight: 600; }
+    .callout {
+      padding: 16px 18px;
+      background: #f0f7f9;
+      border-left: 3px solid var(--accent);
+      border-radius: 0 4px 4px 0;
+      font-size: 14px;
+      line-height: 1.55;
+      color: #3d3d3d;
+    }
+    .callout strong { color: var(--ink); }
+    .footer {
+      padding: 20px 40px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    @media (max-width: 600px) {
+      .header, .body { padding-left: 24px; padding-right: 24px; }
+      .kpi-value { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <article class="report">
+    <header class="header">
+      <div class="header-top">
+        <div class="company">Northline Analytics, Inc.</div>
+        <span class="confidential">Confidential — Internal</span>
+      </div>
+      <h1>Month-End Financial Report</h1>
+      <p class="period">Period ending <strong>May 31, 2026</strong> · Prepared June 2, 2026 · USD</p>
+    </header>
+
+    <div class="body">
+      <section class="section">
+        <h2 class="section-title">Executive summary</h2>
+        <div class="kpis">
+          <div class="kpi">
+            <div class="kpi-label">Net revenue</div>
+            <div class="kpi-value">$1.24M</div>
+            <div class="kpi-delta up">↑ 8.2% vs Apr · 3.1% above plan</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Gross margin</div>
+            <div class="kpi-value">72.4%</div>
+            <div class="kpi-delta up">↑ 1.2 pts MoM</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">EBITDA</div>
+            <div class="kpi-value">$186K</div>
+            <div class="kpi-delta up">↑ 14% vs Apr</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Cash & equivalents</div>
+            <div class="kpi-value">$4.82M</div>
+            <div class="kpi-delta flat">18.4 mo runway at current burn</div>
+          </div>
+        </div>
+        <div class="callout" style="margin-top:20px">
+          <strong>Headline:</strong> May closed ahead of plan on revenue and margin. Enterprise expansion (+$92K ARR) offset slower SMB conversions. OpEx came in 2% under budget; hiring remains the largest variance driver for Q3.
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">Revenue vs plan</h2>
+        <div class="chart" id="revenue-chart">
+          <div class="chart-row">
+            <span class="chart-label">Enterprise</span>
+            <div class="chart-track"><div class="chart-fill plan" data-w="88"></div><div class="chart-fill" data-w="94"></div></div>
+            <span class="chart-val">$612K</span>
+          </div>
+          <div class="chart-row">
+            <span class="chart-label">Mid-market</span>
+            <div class="chart-track"><div class="chart-fill plan" data-w="72"></div><div class="chart-fill" data-w="68"></div></div>
+            <span class="chart-val">$398K</span>
+          </div>
+          <div class="chart-row">
+            <span class="chart-label">SMB</span>
+            <div class="chart-track"><div class="chart-fill plan" data-w="55"></div><div class="chart-fill" data-w="48"></div></div>
+            <span class="chart-val">$230K</span>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-top:8px">Dark bar = actual · Light bar = plan</p>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">Financial detail</h2>
+        <div class="tabs">
+          <button class="tab active" data-panel="pnl">P&amp;L</button>
+          <button class="tab" data-panel="cash">Cash flow</button>
+          <button class="tab" data-panel="opex">OpEx by dept</button>
+        </div>
+
+        <div id="pnl" class="panel active">
+          <table>
+            <thead>
+              <tr>
+                <th>Line item</th>
+                <th>May actual</th>
+                <th>Apr actual</th>
+                <th>Plan</th>
+                <th>Var %</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Revenue</td><td>$1,241,000</td><td>$1,147,000</td><td>$1,204,000</td><td class="pos">+3.1%</td></tr>
+              <tr><td>COGS</td><td>($342,000)</td><td>($328,000)</td><td>($350,000)</td><td class="pos">+2.3%</td></tr>
+              <tr><td>Gross profit</td><td>$899,000</td><td>$819,000</td><td>$854,000</td><td class="pos">+5.3%</td></tr>
+              <tr><td>Sales & marketing</td><td>($312,000)</td><td>($298,000)</td><td>($320,000)</td><td class="pos">+2.5%</td></tr>
+              <tr><td>R&amp;D</td><td>($248,000)</td><td>($241,000)</td><td>($255,000)</td><td class="pos">+2.7%</td></tr>
+              <tr><td>G&amp;A</td><td>($153,000)</td><td>($149,000)</td><td>($158,000)</td><td class="pos">+3.2%</td></tr>
+              <tr class="total"><td>EBITDA</td><td>$186,000</td><td>$131,000</td><td>$121,000</td><td class="pos">+53.7%</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="cash" class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Activity</th>
+                <th>May</th>
+                <th>YTD</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Operating cash flow</td><td>$142,000</td><td>$628,000</td></tr>
+              <tr><td>CapEx</td><td>($18,000)</td><td>($94,000)</td></tr>
+              <tr><td>Financing</td><td>—</td><td>—</td></tr>
+              <tr class="total"><td>Net change in cash</td><td>$124,000</td><td>$534,000</td></tr>
+            </tbody>
+          </table>
+          <div class="callout" style="margin-top:16px">
+            Collections improved: DSO down to <strong>38 days</strong> from 42 in April. No material AR write-offs this period.
+          </div>
+        </div>
+
+        <div id="opex" class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Department</th>
+                <th>May</th>
+                <th>Budget</th>
+                <th>Variance</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Engineering</td><td>$198,000</td><td>$205,000</td><td class="pos">($7,000)</td></tr>
+              <tr><td>Sales</td><td>$156,000</td><td>$162,000</td><td class="pos">($6,000)</td></tr>
+              <tr><td>Marketing</td><td>$89,000</td><td>$92,000</td><td class="pos">($3,000)</td></tr>
+              <tr><td>Customer success</td><td>$67,000</td><td>$64,000</td><td class="neg">$3,000</td></tr>
+              <tr><td>G&amp;A</td><td>$153,000</td><td>$158,000</td><td class="pos">($5,000)</td></tr>
+              <tr class="total"><td>Total OpEx</td><td>$663,000</td><td>$681,000</td><td class="pos">($18,000)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2 class="section-title">Outlook — June 2026</h2>
+        <p style="color:#3d3d3d;margin-bottom:12px">Revenue guidance: <strong>$1.28–1.32M</strong>. Two enterprise renewals ($180K combined) expected to close in first two weeks. Watch item: cloud infra costs trending +6% with batch workload growth.</p>
+      </section>
+    </div>
+
+    <footer class="footer">
+      <span>Northline Analytics · Finance</span>
+      <span>Generated with Claude · Published via Relay</span>
+    </footer>
+  </article>
+
+  <script>
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.panel).classList.add('active');
+      });
+    });
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.chart-fill[data-w]').forEach(el => {
+        el.style.width = el.dataset.w + '%';
+      });
+    });
+  </script>
+</body>
+</html>

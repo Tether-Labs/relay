@@ -1,0 +1,19 @@
+{
+  "name": "relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:api": "npm run dev --prefix apps/api",
+    "dev:web": "npm run dev --prefix apps/web",
+    "build": "npm run build --prefix apps/web",
+    "test": "npm run test --prefix apps/api",
+    "seed:demo": "npm run seed:demo --prefix apps/api",
+    "publish": "npm run publish --prefix packages/cli"
+  },
+  "workspaces": [
+    "apps/api",
+    "apps/web",
+    "packages/cli"
+  ]
+}

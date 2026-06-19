@@ -1,0 +1,36 @@
+{
+  "name": "@tether-labs/relay-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "email:test": "tsx scripts/send-resend-test.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.12",
+    "@hono/zod-validator": "^0.7.6",
+    "adm-zip": "^0.5.16",
+    "better-sqlite3": "^11.10.0",
+    "dotenv": "^17.3.1",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.9",
+    "nanoid": "^5.1.7",
+    "resend": "^6.14.0",
+    "tsx": "^4.21.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^25.5.0",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}

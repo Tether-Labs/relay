@@ -1,0 +1,44 @@
+# Relay API production app.
+# First deploy:
+#   flyctl apps create relay-tether-labs
+#   flyctl volumes create relay_data --region sjc --size 1
+#   flyctl secrets set SESSION_SECRET=... API_URL=https://relay-tether-labs.fly.dev WEB_URL=https://your-vercel-url.vercel.app
+#   flyctl deploy
+
+app = "relay-tether-labs"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3847"
+  API_URL = "https://relay-tether-labs.fly.dev"
+  WEB_URL = "https://relay.tether-labs.com"
+  DATABASE_URL = "/data/relay.db"
+  STORAGE_DIR = "/data/storage"
+  RELAY_HIDE_FOOTER = "0"
+  EMAIL_FROM = "Relay <noreply@tether-labs.com>"
+
+[mounts]
+  source = "relay_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3847
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

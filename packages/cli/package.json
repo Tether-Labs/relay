@@ -1,0 +1,19 @@
+{
+  "name": "@tether-labs/relay-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "relay": "src/publish.ts"
+  },
+  "scripts": {
+    "publish": "tsx src/publish.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^6.0.2"
+  }
+}

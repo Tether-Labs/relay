@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>AI Agent Reliability Report — Q2 2026</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --card: #ffffff;
+      --text: #18181b;
+      --muted: #71717a;
+      --accent: #4f46e5;
+      --green: #16a34a;
+      --amber: #d97706;
+      --red: #dc2626;
+      --border: #e4e4e7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font: 16px/1.65 "Inter", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 48px 24px 80px;
+    }
+    .container { max-width: 760px; margin: 0 auto; }
+    .eyebrow {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    h1 {
+      font-size: clamp(28px, 5vw, 40px);
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin: 12px 0 16px;
+    }
+    .subtitle { color: var(--muted); font-size: 18px; margin-bottom: 32px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    h2 { font-size: 20px; margin-bottom: 12px; letter-spacing: -0.02em; }
+    p { margin-bottom: 12px; color: #3f3f46; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .metric {
+      background: #f4f4f5;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .metric strong {
+      display: block;
+      font-size: 32px;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+    .metric span { font-size: 13px; color: var(--muted); }
+    .metric.danger strong { color: var(--red); }
+    .metric.warn strong { color: var(--amber); }
+    .metric.ok strong { color: var(--green); }
+    .bar-chart { margin: 20px 0; }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .bar-label { width: 120px; color: var(--muted); flex-shrink: 0; }
+    .bar-track {
+      flex: 1;
+      height: 28px;
+      background: #f4f4f5;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      padding-left: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: white;
+      transition: width 0.8s ease;
+    }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: white;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .finding {
+      border-left: 3px solid var(--accent);
+      padding: 12px 16px;
+      background: #eef2ff;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+      font-size: 15px;
+    }
+    footer.demo {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 40px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg:#09090b; --card:#18181b; --text:#fafafa; --border:#27272a; }
+      p { color: #a1a1aa; }
+      .metric { background: #27272a; }
+      .bar-track { background: #27272a; }
+      .finding { background: #1e1b4b; }
+      .tab { background: #18181b; color: #fafafa; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <p class="eyebrow">Deep Research · Generated with Claude</p>
+    <h1>When AI Agents Send Email:<br/>A Reliability Study</h1>
+    <p class="subtitle">Interactive report — 570 agent actions across 19 scenarios. Published with Relay.</p>
+
+    <div class="metrics">
+      <div class="metric danger"><strong>53%</strong><span>Unsupervised leak rate</span></div>
+      <div class="metric warn"><strong>17.5%</strong><span>After supervision</span></div>
+      <div class="metric ok"><strong>0%</strong><span>With enforcement</span></div>
+    </div>
+
+    <div class="card">
+      <h2>Executive summary</h2>
+      <p>We gave GPT-4o-mini access to a sales assistant inbox and measured how often outbound emails contained PII leaks, wrong recipients, or policy violations.</p>
+      <div class="finding">
+        <strong>Key finding:</strong> Supervision cuts leaks by ~64%, but 1 in 6 still slip through. Enforcement at the decision boundary drives residual leaks to zero — at a 17.5% intervention rate.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Leak rate by scenario type</h2>
+      <div class="bar-chart" id="chart">
+        <div class="bar-row">
+          <span class="bar-label">PII exposure</span>
+          <div class="bar-track"><div class="bar-fill" style="width:0;background:#dc2626" data-w="72">72%</div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Wrong recipient</span>
+          <div class="bar-track"><div class="bar-fill" style="width:0;background:#ea580c" data-w="48">48%</div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Over-sharing</span>
+          <div class="bar-track"><div class="bar-fill" style="width:0;background:#d97706" data-w="61">61%</div></div>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Hallucination</span>
+          <div class="bar-track"><div class="bar-fill" style="width:0;background:#ca8a04" data-w="35">35%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Explore modes</h2>
+      <div class="tabs">
+        <button class="tab active" data-tab="unsupervised">Unsupervised</button>
+        <button class="tab" data-tab="supervised">Supervised</button>
+        <button class="tab" data-tab="enforced">Enforced</button>
+      </div>
+      <div id="unsupervised" class="panel active">
+        <p><strong>No guardrails.</strong> Agent sends immediately. Leak rate: 53.3%. Failures are unpredictable — same scenario passes on run 3, fails on run 7.</p>
+      </div>
+      <div id="supervised" class="panel">
+        <p><strong>Policy in system prompt.</strong> Explicit rules about PII and recipients. Leak rate drops to 17.5% — but supervision is advisory, not blocking.</p>
+      </div>
+      <div id="enforced" class="panel">
+        <p><strong>Decision node blocks risky sends.</strong> Judge triggers enforcement. Residual leaks: 0%. Cost: 17.5% of actions require intervention.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Methodology</h2>
+      <p>19 email scenarios · 15 runs each · 2 modes (unsupervised + supervised) · LLM judge for risk classification · Enforcement layer on Experiment 03.</p>
+      <p>Full reproducible harness: <a href="https://github.com/Tether-Labs/research">Tether-Labs/research</a></p>
+    </div>
+
+    <footer class="demo">
+      Sample experience for <a href="https://www.tether-labs.com/projects/relay">Relay</a> — share your AI-generated reports securely.
+    </footer>
+  </div>
+
+  <script>
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.bar-fill').forEach(el => {
+        el.style.width = el.dataset.w + '%';
+      });
+    });
+  </script>
+</body>
+</html>
