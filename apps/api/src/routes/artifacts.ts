@@ -14,6 +14,11 @@ import { saveHtmlFile, extractZip } from "../lib/storage.js";
 import { sessionMiddleware, requireApiSession } from "../middleware/session.js";
 import { getArtifactBySlug } from "../lib/permissions.js";
 import { sendInviteLink, normalizeEmail } from "../lib/email.js";
+import {
+  getArtifactAnalytics,
+  getArtifactViewRows,
+  artifactAnalyticsToCsv,
+} from "../lib/artifact-analytics.js";
 import { getConfig } from "../config.js";
 import type { SessionUser } from "../lib/permissions.js";
 
@@ -198,24 +203,34 @@ api.get("/artifacts/:slug/analytics", async (c) => {
   }
 
   const db = getDb();
-  const [stats] = await db
-    .select({
-      totalViews: count(),
-      lastViewedAt: max(artifactViews.viewed_at),
-    })
-    .from(artifactViews)
-    .where(eq(artifactViews.artifact_id, artifact.id));
+  const invites = await db
+    .select({ email: artifactAccess.email, invited_at: artifactAccess.invited_at })
+    .from(artifactAccess)
+    .where(eq(artifactAccess.artifact_id, artifact.id))
+    .orderBy(desc(artifactAccess.invited_at));
 
-  const uniqueRows = await db
-    .select({ viewer_hash: artifactViews.viewer_hash })
-    .from(artifactViews)
-    .where(eq(artifactViews.artifact_id, artifact.id))
-    .groupBy(artifactViews.viewer_hash);
+  const analytics = await getArtifactAnalytics(artifact, invites);
+  return c.json(analytics);
+});
 
-  return c.json({
-    totalViews: stats?.totalViews ?? 0,
-    uniqueViewers: uniqueRows.length,
-    lastViewedAt: stats?.lastViewedAt ?? null,
+api.get("/artifacts/:slug/analytics/export", async (c) => {
+  const session = c.get("session")!;
+  const slug = c.req.param("slug");
+  const artifact = await getArtifactBySlug(slug);
+
+  if (!artifact || artifact.owner_id !== session.userId) {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  const views = await getArtifactViewRows(artifact.id);
+  const csv = artifactAnalyticsToCsv(artifact.title, views);
+  const filename = `${slug}-analytics.csv`;
+
+  return new Response(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
   });
 });
 
@@ -270,6 +285,37 @@ api.post(
     }
 
     return c.json({ ok: true, invited: emails.length });
+  },
+);
+
+api.delete(
+  "/artifacts/:slug/access",
+  zValidator(
+    "json",
+    z.object({
+      email: z.string().email(),
+    }),
+  ),
+  async (c) => {
+    const session = c.get("session")!;
+    const slug = c.req.param("slug");
+    const artifact = await getArtifactBySlug(slug);
+
+    if (!artifact || artifact.owner_id !== session.userId) {
+      return c.json({ error: "Not found" }, 404);
+    }
+
+    const email = normalizeEmail(c.req.valid("json").email);
+    const db = getDb();
+    const result = await db
+      .delete(artifactAccess)
+      .where(and(eq(artifactAccess.artifact_id, artifact.id), eq(artifactAccess.email, email)));
+
+    if (result.changes === 0) {
+      return c.json({ error: "Viewer not found" }, 404);
+    }
+
+    return c.json({ ok: true });
   },
 );
 

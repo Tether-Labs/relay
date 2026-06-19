@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * relay publish report.html
- * Requires RELAY_TOKEN (session cookie value) or ~/.relay/session
+ * Requires RELAY_TOKEN (Clerk session JWT) or ~/.relay/session
  */
 import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -25,7 +25,9 @@ function getToken(): string | null {
 async function main() {
   const token = getToken();
   if (!token) {
-    console.error("Sign in first, then set RELAY_TOKEN or save the relay_session cookie to ~/.relay/session");
+    console.error(
+      "Sign in via the web app, then set RELAY_TOKEN to a Clerk session JWT or save it to ~/.relay/session",
+    );
     process.exit(1);
   }
 
@@ -40,7 +42,7 @@ async function main() {
 
   const res = await fetch(`${apiUrl}/api/artifacts`, {
     method: "POST",
-    headers: { Cookie: `relay_session=${token}` },
+    headers: { Authorization: `Bearer ${token}` },
     body: form,
   });
 

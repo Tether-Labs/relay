@@ -1,80 +1,106 @@
 import { Link } from "react-router-dom";
 import { Copy, ExternalLink, Eye, Users } from "lucide-react";
-import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { VisibilityBadge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArtifactPreview } from "@/components/artifact-preview";
 import { getArtifactViewUrl, type ArtifactRecord } from "@/lib/api";
-import { cn } from "@/lib/utils";
 
 function formatDate(ts: number) {
-  return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return new Date(ts).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function ArtifactGridCard({ artifact }: { artifact: ArtifactRecord }) {
-  const [copied, setCopied] = useState(false);
-
   function copyLink(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
     navigator.clipboard.writeText(artifact.url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    toast.success("Link copied");
   }
 
+  const views = artifact.totalViews ?? 0;
+  const unique = artifact.uniqueViewers ?? 0;
+
   return (
-    <Link to={`/artifacts/${artifact.slug}`} className="group block">
-      <Card className={cn("paper-sheet-hover flex h-full flex-col overflow-hidden p-0")}>
+    <Link to={`/artifacts/${artifact.slug}`} className="group block h-full">
+      <Card className="paper-sheet-hover flex h-full flex-col gap-0 overflow-hidden p-0">
         <ArtifactPreview
           slug={artifact.slug}
           visibility={artifact.visibility}
-          className="h-36 w-full border-b border-border/60"
+          className="h-32 w-full shrink-0"
         />
-        <CardHeader className="pb-2 pt-4">
+
+        <div className="flex flex-1 flex-col p-3.5">
           <div className="flex items-start justify-between gap-2">
-            <CardTitle className="line-clamp-2 text-base group-hover:text-primary">
+            <h3 className="line-clamp-2 font-heading text-sm font-semibold leading-snug tracking-tight group-hover:text-primary">
               {artifact.title}
-            </CardTitle>
+            </h3>
             <VisibilityBadge visibility={artifact.visibility} />
           </div>
-          <p className="font-mono text-[11px] text-muted-foreground">/a/{artifact.slug}</p>
-        </CardHeader>
-        <CardContent className="mt-auto space-y-3 pb-4">
-          <div className="flex gap-4 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <Eye className="size-3.5" />
-              {artifact.totalViews ?? 0}
+
+          <p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+            /a/{artifact.slug}
+            <span className="mx-1.5 text-border">·</span>
+            <span className="font-sans">{formatDate(artifact.created_at)}</span>
+          </p>
+
+          <div className="mt-2.5 flex items-center gap-3 border border-border/70 bg-muted/30 px-2.5 py-1.5 text-xs">
+            <span className="inline-flex items-center gap-1.5">
+              <Eye className="size-3.5 text-muted-foreground" />
+              <span className="font-medium tabular-nums text-foreground">{views}</span>
+              <span className="text-muted-foreground">views</span>
             </span>
-            <span className="inline-flex items-center gap-1">
-              <Users className="size-3.5" />
-              {artifact.uniqueViewers ?? 0} unique
+            <span className="text-border">·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="size-3.5 text-muted-foreground" />
+              <span className="font-medium tabular-nums text-foreground">{unique}</span>
+              <span className="text-muted-foreground">unique</span>
             </span>
-            <span className="ml-auto">{formatDate(artifact.created_at)}</span>
           </div>
-        </CardContent>
-        <CardFooter className="gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 bg-card"
-            onClick={copyLink}
-          >
-            <Copy className="size-3.5" />
-            {copied ? "Copied" : "Copy link"}
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="shrink-0"
-            onClick={(e) => e.stopPropagation()}
-            asChild
-          >
-            <a href={getArtifactViewUrl(artifact.slug)} target="_blank" rel="noreferrer">
-              <ExternalLink className="size-3.5" />
-            </a>
-          </Button>
-        </CardFooter>
+
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 bg-card"
+                  onClick={copyLink}
+                  aria-label="Copy link"
+                >
+                  <Copy className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Copy link</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 bg-card"
+                  onClick={(e) => e.stopPropagation()}
+                  asChild
+                >
+                  <a
+                    href={getArtifactViewUrl(artifact.slug)}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Open in new tab"
+                  >
+                    <ExternalLink className="size-3.5" />
+                  </a>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Open in new tab</TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
       </Card>
     </Link>
   );

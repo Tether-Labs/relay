@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { Resend } from "resend";
 import { getConfig } from "../config.js";
+import { isResendEnabled } from "./resend-config.js";
 
 type EmailKind = "sign-in" | "invite";
 
@@ -63,12 +64,13 @@ async function sendEmail(opts: {
 }): Promise<void> {
   const config = getConfig();
   const html = emailLayout(opts.title, opts.body, opts.ctaLabel, opts.ctaUrl);
+  const useResend = isResendEnabled(config.resendApiKey);
 
-  if (config.logMagicLinks) {
+  if (config.logMagicLinks || !useResend) {
     logDevLink(opts.kind, opts.to, opts.ctaUrl);
   }
 
-  if (!config.resendApiKey) {
+  if (!useResend) {
     return;
   }
 
@@ -81,6 +83,11 @@ async function sendEmail(opts: {
   });
 
   if (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`Resend failed (${error.message}); logging invite link to terminal`);
+      logDevLink(opts.kind, opts.to, opts.ctaUrl);
+      return;
+    }
     throw new Error(`Resend failed: ${error.message}`);
   }
 }

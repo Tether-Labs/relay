@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
+import { isResendEnabled } from "./lib/resend-config.js";
 
 const configSchema = z.object({
   port: z.coerce.number().default(3847),
@@ -13,6 +14,7 @@ const configSchema = z.object({
   hideFooter: z.coerce.boolean().default(false),
   resendApiKey: z.string().optional(),
   emailFrom: z.string().default("Relay <onboarding@resend.dev>"),
+  clerkSecretKey: z.string().optional(),
   /** Log magic links to terminal (default on when RESEND_API_KEY unset) */
   logMagicLinks: z.coerce.boolean().default(true),
 });
@@ -39,10 +41,11 @@ export function getConfig(): Config {
       hideFooter: process.env.RELAY_HIDE_FOOTER === "1",
       resendApiKey: process.env.RESEND_API_KEY,
       emailFrom: process.env.EMAIL_FROM,
+      clerkSecretKey: process.env.CLERK_SECRET_KEY,
       logMagicLinks:
         process.env.LOG_MAGIC_LINKS === "0"
           ? false
-          : process.env.LOG_MAGIC_LINKS === "1" || !process.env.RESEND_API_KEY,
+          : process.env.LOG_MAGIC_LINKS === "1" || !isResendEnabled(process.env.RESEND_API_KEY),
     });
   }
   return cached;
