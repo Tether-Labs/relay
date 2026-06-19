@@ -4,19 +4,12 @@ import { eq, and, gt } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { sessions, users } from "../db/schema.js";
 import { getConfig } from "../config.js";
+import { verifyClerkBearer } from "../lib/clerk.js";
 import type { SessionUser } from "../lib/permissions.js";
 
 const COOKIE_NAME = "relay_session";
 
-export const sessionMiddleware = createMiddleware<{
-  Variables: { session: SessionUser | null };
-}>(async (c, next) => {
-  const token = getCookie(c, COOKIE_NAME);
-  if (!token) {
-    c.set("session", null);
-    return next();
-  }
-
+async function sessionFromCookie(token: string): Promise<SessionUser | null> {
   const db = getDb();
   const now = Date.now();
   const rows = await db
@@ -29,21 +22,33 @@ export const sessionMiddleware = createMiddleware<{
     .where(and(eq(sessions.token, token), gt(sessions.expires_at, now)))
     .limit(1);
 
-  c.set("session", rows[0] ?? null);
+  return rows[0] ?? null;
+}
+
+async function sessionFromBearer(c: { req: { header: (name: string) => string | undefined } }): Promise<SessionUser | null> {
+  const authHeader = c.req.header("authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+  if (!token) return null;
+  return verifyClerkBearer(token);
+}
+
+export const sessionMiddleware = createMiddleware<{
+  Variables: { session: SessionUser | null };
+}>(async (c, next) => {
+  const token = getCookie(c, COOKIE_NAME);
+  let session: SessionUser | null = null;
+
+  if (token) {
+    session = await sessionFromCookie(token);
+  }
+
+  if (!session) {
+    session = await sessionFromBearer(c);
+  }
+
+  c.set("session", session);
   await next();
 });
-
-export function requireSession() {
-  return createMiddleware<{
-    Variables: { session: SessionUser };
-  }>(async (c, next) => {
-    const session = c.get("session");
-    if (!session) {
-      return c.redirect(`${getConfig().webUrl}/login`);
-    }
-    await next();
-  });
-}
 
 export function requireApiSession() {
   return createMiddleware<{

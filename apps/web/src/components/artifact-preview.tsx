@@ -7,11 +7,13 @@ export function ArtifactPreview({
   visibility,
   className,
   scale = 0.22,
+  fadeBottom = true,
 }: {
   slug: string;
   visibility: ArtifactRecord["visibility"];
   className?: string;
   scale?: number;
+  fadeBottom?: boolean;
 }) {
   const pct = `${100 / scale}%`;
 
@@ -19,7 +21,7 @@ export function ArtifactPreview({
     return (
       <div
         className={cn(
-          "flex flex-col items-center justify-center gap-2 bg-muted/60 text-muted-foreground",
+          "flex flex-col items-center justify-center gap-2 border-b border-border/60 bg-muted/60 text-muted-foreground",
           className,
         )}
       >
@@ -30,21 +32,32 @@ export function ArtifactPreview({
   }
 
   return (
-    <div className={cn("relative overflow-hidden bg-white", className)}>
-      <iframe
-        src={getArtifactViewUrl(slug)}
-        title={`Preview of ${slug}`}
-        className="pointer-events-none absolute left-0 top-0 border-0"
-        style={{
-          width: pct,
-          height: pct,
-          transform: `scale(${scale})`,
-          transformOrigin: "top left",
-        }}
-        tabIndex={-1}
-        loading="lazy"
-      />
-      <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card/90 to-transparent" />
+    <div className={cn("relative overflow-hidden bg-card", className)}>
+      <div
+        className="absolute inset-0"
+        style={
+          fadeBottom
+            ? {
+                maskImage: "linear-gradient(to bottom, #000 78%, transparent 100%)",
+                WebkitMaskImage: "linear-gradient(to bottom, #000 78%, transparent 100%)",
+              }
+            : undefined
+        }
+      >
+        <iframe
+          src={getArtifactViewUrl(slug)}
+          title={`Preview of ${slug}`}
+          className="pointer-events-none absolute left-0 top-0 border-0"
+          style={{
+            width: pct,
+            height: pct,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+          }}
+          tabIndex={-1}
+          loading="lazy"
+        />
+      </div>
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { serve } from "@hono/node-server";
 import { getConfig } from "./config.js";
 import authRoute from "./routes/auth.js";
 import apiRoute from "./routes/artifacts.js";
+import leaderboardRoute from "./routes/leaderboard.js";
+import usersRoute from "./routes/users.js";
 import viewRoute from "./routes/view.js";
 import { migrate } from "./db/migrate.js";
 
@@ -40,6 +42,8 @@ app.get("/", (c) => c.redirect(config.webUrl));
 app.get("/health", (c) => c.json({ status: "ok", service: "relay" }));
 
 app.route("/auth", authRoute);
+app.route("/api", leaderboardRoute);
+app.route("/api", usersRoute);
 app.route("/api", apiRoute);
 app.route("/", viewRoute);
 

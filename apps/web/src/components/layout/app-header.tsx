@@ -1,37 +1,54 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { SquaresFour, Plus } from "@phosphor-icons/react";
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+} from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
-import { logout } from "@/lib/api";
-import type { User } from "@/lib/api";
 
-export function AppHeader({ user }: { user?: User | null }) {
-  const navigate = useNavigate();
-
-  async function handleLogout() {
-    await logout();
-    navigate("/");
-  }
+export function AppHeader() {
+  const { pathname } = useLocation();
+  const isDashboard = pathname === "/dashboard";
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-card/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 bg-transparent">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-        <Link to="/" className="text-[15px] font-semibold tracking-tight text-foreground">
+        <Link to="/" className="font-heading text-[15px] font-semibold tracking-tight text-foreground">
           Relay
         </Link>
-        <nav className="flex items-center gap-1">
-          {user ? (
-            <>
-              <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
-                <Link to="/dashboard">Dashboard</Link>
+        <nav className="flex items-center gap-2">
+          <SignedIn>
+            {!isDashboard && (
+              <>
+                <Button variant="ghost" size="sm" className="hidden text-muted-foreground sm:inline-flex" asChild>
+                  <Link to="/dashboard">
+                    <SquaresFour />
+                    Dashboard
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link to="/publish">
+                    <Plus />
+                    New
+                  </Link>
+                </Button>
+              </>
+            )}
+            <UserButton afterSignOutUrl="/" userProfileMode="modal" />
+          </SignedIn>
+          <SignedOut>
+            <SignInButton mode="modal">
+              <Button variant="ghost" size="sm">
+                Sign in
               </Button>
-              <Button variant="outline" size="sm" className="bg-card" onClick={handleLogout}>
-                Sign out
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" asChild>
-              <Link to="/login">Sign in</Link>
-            </Button>
-          )}
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <Button size="sm">Get started</Button>
+            </SignUpButton>
+          </SignedOut>
         </nav>
       </div>
     </header>
@@ -40,16 +57,14 @@ export function AppHeader({ user }: { user?: User | null }) {
 
 export function PageShell({
   children,
-  user,
   className,
 }: {
   children: React.ReactNode;
-  user?: User | null;
   className?: string;
 }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <AppHeader user={user} />
+      <AppHeader />
       <main className={className ?? "flex-1"}>{children}</main>
     </div>
   );
