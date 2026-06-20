@@ -17,7 +17,7 @@ const TABS: { id: TabId; label: string; icon: typeof Globe }[] = [
 
 const CLI_COMMAND = "relay publish report.html";
 const SKILLS_COMMAND = "npx skills@latest add relay/skills";
-const MCP_SERVER_URL = "https://mcp.relay.app/server";
+const MCP_COMMAND = "RELAY_TOKEN=relay_pat_... npx tsx /path/to/relay/packages/mcp/src/server.ts";
 
 const MCP_PLATFORMS = [
   { id: "cursor", label: "Cursor" },
@@ -31,7 +31,7 @@ const MCP_PLATFORMS = [
 type McpPlatform = (typeof MCP_PLATFORMS)[number]["id"];
 
 function mcpCommand(client: McpPlatform) {
-  return `npx install-mcp ${MCP_SERVER_URL} --client ${client}`;
+  return `${MCP_COMMAND} # ${client}`;
 }
 
 function copyCommand(command: string) {

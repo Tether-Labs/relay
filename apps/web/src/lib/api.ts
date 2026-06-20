@@ -27,6 +27,14 @@ export type LeaderboardEntry = {
 
 export type User = { email: string; userId: string };
 
+export type AgentTokenRecord = {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+};
+
 export type PublicArtifactRecord = {
   slug: string;
   title: string;
@@ -175,6 +183,26 @@ export async function logout(): Promise<void> {
     method: "POST",
     credentials: "include",
     headers: await authHeaders(),
+  });
+}
+
+export async function listAgentTokens(): Promise<{ tokens: AgentTokenRecord[] }> {
+  return api("/auth/agent-tokens");
+}
+
+export async function createAgentToken(name: string): Promise<{
+  token: string;
+  tokenRecord: AgentTokenRecord;
+}> {
+  return api("/auth/agent-tokens", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+export async function revokeAgentToken(id: string): Promise<{ ok: boolean }> {
+  return api(`/auth/agent-tokens/${id}`, {
+    method: "DELETE",
   });
 }
 

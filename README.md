@@ -9,6 +9,7 @@ Relay turns agent outputs into secure, shareable artifacts for humans and teams 
 | `apps/api` | Hono, Drizzle, SQLite, Clerk | REST API, artifact storage, `/a/:slug` viewer, analytics |
 | `apps/web` | React, Vite, Tailwind, Clerk, shadcn/ui | Dashboard, publish flow, public profiles, landing page |
 | `packages/cli` | Node | `relay publish` for agents and scripts |
+| `packages/mcp` | MCP, Node | Local stdio MCP server for publishing from Cursor/Claude-style agents |
 | `demo` | HTML | Sample artifacts for local seeding |
 
 ## Run locally
@@ -32,6 +33,7 @@ npm run seed:demo    # optional demo artifacts
 npm run test         # API tests
 npm run build        # build web for production
 npm run publish -- demo/month-end-financial-report.html
+npm run mcp          # local stdio MCP server
 ```
 
 Migrations run automatically when the API starts.
@@ -62,7 +64,8 @@ In the Clerk dashboard, set allowed redirect URLs for local dev:
 
 The web app signs in with Clerk, then POSTs to `/auth/sync` to mint an HTTP-only API session cookie. That cookie is required when viewing restricted artifacts at `/a/:slug` on the API origin. API routes accept either:
 
-- `Authorization: Bearer <Clerk JWT>` (web app and CLI), or
+- `Authorization: Bearer <Clerk JWT>` (web app), or
+- `Authorization: Bearer <relay_pat_...>` (CLI, MCP, and other agents), or
 - `relay_session` cookie (artifact viewer after sync)
 
 User IDs in SQLite match Clerk user IDs (`user_...`).
@@ -86,8 +89,8 @@ Signed-in users can drag-and-drop on the home page or use **New artifact** on th
 ### CLI
 
 ```bash
-# After signing in via the web app, copy a Clerk session JWT:
-export RELAY_TOKEN=eyJ...
+# After signing in via the web app, create an agent token in the dashboard:
+export RELAY_TOKEN=relay_pat_...
 # Or save it to ~/.relay/session
 
 npm run publish -- path/to/report.html
@@ -98,13 +101,40 @@ RELAY_TITLE="My Report"
 RELAY_VISIBILITY=public   # public | private | restricted
 ```
 
-### MCP & Skills
+### MCP
+
+Run the local stdio MCP server from the repo:
+
+```bash
+export RELAY_API_URL=https://relay-tether-labs.fly.dev
+export RELAY_TOKEN=relay_pat_... # Or save it to ~/.relay/session
+npm run mcp
+```
+
+Example Cursor MCP config:
+
+```json
+{
+  "mcpServers": {
+    "relay": {
+      "command": "npx",
+      "args": ["tsx", "/absolute/path/to/relay/packages/mcp/src/server.ts"],
+      "env": {
+        "RELAY_API_URL": "https://relay-tether-labs.fly.dev",
+        "RELAY_TOKEN": "relay_pat_..."
+      }
+    }
+  }
+}
+```
+
+The server exposes `publish_artifact`, which accepts either a local `filePath` (`.html`, `.htm`, or `.zip`) or raw `html`, plus optional `title`, `fileName`, and `visibility`.
+
+### Skills
 
 Documented on the home page publish panel:
 
 ```bash
-relay publish report.html
-npx install-mcp https://mcp.relay.app/server --client cursor
 npx skills@latest add relay/skills
 ```
 

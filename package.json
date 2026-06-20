@@ -10,12 +10,14 @@
     "build": "npm run build --prefix apps/web",
     "test": "npm run test --prefix apps/api",
     "seed:demo": "npm run seed:demo --prefix apps/api",
-    "publish": "npm run publish --prefix packages/cli"
+    "publish": "npm run publish --prefix packages/cli",
+    "mcp": "npm run dev --prefix packages/mcp"
   },
   "workspaces": [
     "apps/api",
     "apps/web",
-    "packages/cli"
+    "packages/cli",
+    "packages/mcp"
   ],
   "devDependencies": {
     "concurrently": "^9.2.1"

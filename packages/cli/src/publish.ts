@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * relay publish report.html
- * Requires RELAY_TOKEN (Clerk session JWT) or ~/.relay/session
+ * Requires RELAY_TOKEN (relay_pat agent token) or ~/.relay/session
  */
 import { readFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -26,7 +26,7 @@ async function main() {
   const token = getToken();
   if (!token) {
     console.error(
-      "Sign in via the web app, then set RELAY_TOKEN to a Clerk session JWT or save it to ~/.relay/session",
+      "Create an agent token in the Relay dashboard, then set RELAY_TOKEN or save it to ~/.relay/session",
     );
     process.exit(1);
   }

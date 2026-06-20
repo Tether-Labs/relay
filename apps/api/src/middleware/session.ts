@@ -5,6 +5,7 @@ import { getDb } from "../db/index.js";
 import { sessions, users } from "../db/schema.js";
 import { getConfig } from "../config.js";
 import { verifyClerkBearer } from "../lib/clerk.js";
+import { sessionFromAgentToken } from "../lib/agent-tokens.js";
 import type { SessionUser } from "../lib/permissions.js";
 
 const COOKIE_NAME = "relay_session";
@@ -29,6 +30,8 @@ async function sessionFromBearer(c: { req: { header: (name: string) => string | 
   const authHeader = c.req.header("authorization");
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
   if (!token) return null;
+  const agentSession = await sessionFromAgentToken(token);
+  if (agentSession) return agentSession;
   return verifyClerkBearer(token);
 }
 

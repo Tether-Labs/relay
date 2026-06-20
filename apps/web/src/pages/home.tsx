@@ -15,8 +15,8 @@ export function HomePage() {
         </h1>
 
         <p className="mt-5 max-w-lg text-sm leading-relaxed text-muted-foreground">
-          Upload HTML or zip bundles from your coding agent and publish them to a link — set who can
-          view it, see who opened it.
+          Upload HTML or zip bundles from the web, CLI, or MCP server and publish them to a link —
+          set who can view it, see who opened it.
         </p>
 
         <div className="mt-12 w-full min-w-0 max-w-xl text-left">

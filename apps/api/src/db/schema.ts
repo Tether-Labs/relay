@@ -22,6 +22,23 @@ export const sessions = sqliteTable("sessions", {
   expires_at: integer("expires_at").notNull(),
 });
 
+export const agentTokens = sqliteTable(
+  "agent_tokens",
+  {
+    id: text("id").primaryKey(),
+    user_id: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    name: text("name").notNull(),
+    token_hash: text("token_hash").notNull(),
+    token_prefix: text("token_prefix").notNull(),
+    created_at: integer("created_at").notNull(),
+    last_used_at: integer("last_used_at"),
+    revoked_at: integer("revoked_at"),
+  },
+  (t) => [uniqueIndex("agent_tokens_hash_idx").on(t.token_hash)],
+);
+
 export const artifacts = sqliteTable(
   "artifacts",
   {
