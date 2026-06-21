@@ -1,14 +1,44 @@
 {
-  "name": "@tether-labs/relay-mcp",
+  "name": "@tether-labs.com/relay-mcp",
   "version": "0.1.0",
-  "private": true,
+  "description": "Relay MCP server — publish HTML and zip artifacts from Cursor and other MCP clients",
+  "license": "MIT",
   "type": "module",
   "bin": {
-    "relay-mcp": "src/server.ts"
+    "relay-mcp": "dist/server.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "dev": "tsx src/server.ts",
+    "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "relay",
+    "mcp",
+    "model-context-protocol",
+    "cursor",
+    "artifacts",
+    "tether-labs"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tether-Labs/relay.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/Tether-Labs/relay/issues"
+  },
+  "homepage": "https://relay.tether-labs.com",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

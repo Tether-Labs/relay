@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, extname, join } from "node:path";
@@ -56,7 +56,7 @@ async function publishArtifact(input: {
 }) {
   const token = getToken();
   if (!token) {
-    throw new Error("Missing Relay auth. Set RELAY_TOKEN or save a Clerk session JWT to ~/.relay/session.");
+    throw new Error("Missing Relay auth. Set RELAY_TOKEN (relay_pat_...) or save a token to ~/.relay/session.");
   }
 
   if (!input.filePath && !input.html) {

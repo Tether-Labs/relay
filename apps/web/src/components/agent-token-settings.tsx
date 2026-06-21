@@ -151,10 +151,7 @@ export function AgentTokenSettings() {
   "mcpServers": {
     "relay": {
       "command": "npx",
-      "args": [
-        "tsx",
-        "/Users/narensathiya/Documents/tether/projects/relay/packages/mcp/src/server.ts"
-      ],
+      "args": ["-y", "@tether-labs.com/relay-mcp"],
       "env": {
         "RELAY_API_URL": "https://relay-tether-labs.fly.dev",
         "RELAY_TOKEN": "relay_pat_..."

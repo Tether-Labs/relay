@@ -118,7 +118,7 @@ Example Cursor MCP config:
   "mcpServers": {
     "relay": {
       "command": "npx",
-      "args": ["tsx", "/absolute/path/to/relay/packages/mcp/src/server.ts"],
+      "args": ["-y", "@tether-labs.com/relay-mcp"],
       "env": {
         "RELAY_API_URL": "https://relay-tether-labs.fly.dev",
         "RELAY_TOKEN": "relay_pat_..."
