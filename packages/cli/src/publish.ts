@@ -11,7 +11,7 @@ const apiUrl = process.env.RELAY_API_URL ?? "http://localhost:3847";
 const filePath = process.argv[2];
 
 if (!filePath) {
-  console.error("Usage: npm run publish -- path/to/report.html");
+  console.error("Usage: npm run publish -- path/to/report.html|report.md");
   process.exit(1);
 }
 
@@ -33,7 +33,7 @@ async function main() {
 
   const content = readFileSync(filePath);
   const name = basename(filePath);
-  const title = process.env.RELAY_TITLE ?? name.replace(/\.html?$/i, "");
+  const title = process.env.RELAY_TITLE ?? name.replace(/\.(html?|md|markdown|zip)$/i, "");
 
   const form = new FormData();
   form.append("title", title);

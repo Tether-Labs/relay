@@ -86,7 +86,7 @@ export function dashboardPage(
         <label>Title</label>
         <input name="title" placeholder="Q2 AI Research Report" required style="margin-bottom:12px"/>
         <label>HTML file or zip bundle</label>
-        <input type="file" name="file" accept=".html,.htm,.zip" required style="margin-bottom:12px"/>
+        <input type="file" name="file" accept=".html,.htm,.md,.markdown,.zip" required style="margin-bottom:12px"/>
         <label>Visibility</label>
         <select name="visibility" style="margin-bottom:16px">
           <option value="public">Public — anyone with link</option>

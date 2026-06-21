@@ -4,6 +4,8 @@ import { getDb } from "../db/index.js";
 import { artifactViews } from "../db/schema.js";
 import { newId } from "../lib/id.js";
 import { readArtifactFile } from "../lib/storage.js";
+import { isMarkdownFilename } from "../lib/artifact-files.js";
+import { renderMarkdownDocument } from "../lib/markdown.js";
 import { canViewArtifact, getArtifactBySlug } from "../lib/permissions.js";
 import type { SessionUser } from "../lib/permissions.js";
 import { sessionMiddleware } from "../middleware/session.js";
@@ -82,8 +84,11 @@ view.get("/a/:slug", async (c) => {
   const fingerprint = c.req.header("x-forwarded-for") ?? c.req.header("user-agent") ?? "anon";
   await recordView(artifact.id, session, fingerprint);
 
-  const html = injectFooter(file.toString("utf8"));
-  return c.html(html);
+  const source = file.toString("utf8");
+  const rendered = isMarkdownFilename(artifact.entry_file)
+    ? renderMarkdownDocument(artifact.title, source)
+    : source;
+  return c.html(injectFooter(rendered));
 });
 
 view.get("/a/:slug/*", async (c) => {

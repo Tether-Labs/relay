@@ -11,6 +11,7 @@ import {
 } from "../db/schema.js";
 import { newId, newSlug } from "../lib/id.js";
 import { saveHtmlFile, extractZip } from "../lib/storage.js";
+import { isSupportedArtifactUpload, isZipFilename } from "../lib/artifact-files.js";
 import { sessionMiddleware, requireApiSession } from "../middleware/session.js";
 import { getArtifactBySlug } from "../lib/permissions.js";
 import { sendInviteLink, normalizeEmail } from "../lib/email.js";
@@ -94,7 +95,11 @@ api.post("/artifacts", async (c) => {
     const buffer = Buffer.from(await file.arrayBuffer());
     const name = file.name.toLowerCase();
 
-    if (name.endsWith(".zip")) {
+    if (!isSupportedArtifactUpload(file.name)) {
+      return c.json({ error: "Unsupported file type. Use .html, .htm, .md, or .zip" }, 400);
+    }
+
+    if (isZipFilename(name)) {
       entryFile = extractZip(slug, buffer);
     } else {
       entryFile = saveHtmlFile(slug, file.name, buffer);

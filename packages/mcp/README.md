@@ -43,7 +43,7 @@ Use `auth_status` to verify configuration without exposing the token.
 | Tool | Purpose |
 |------|---------|
 | `auth_status` | Diagnose token configuration |
-| `publish_artifact` | Upload HTML/zip and get a share URL |
+| `publish_artifact` | Upload HTML, Markdown, zip, or raw content and get a share URL |
 | `list_artifacts` | List owned and shared artifacts |
 | `get_artifact_analytics` | View counts, trends, and viewers |
 | `update_artifact_permissions` | Change title or visibility |
@@ -70,22 +70,24 @@ Reports which token source is configured (`env`, `file`, or `missing`) without r
 
 ### `publish_artifact`
 
-Publish a local file or raw HTML to Relay.
+Publish a local file or raw HTML/Markdown to Relay. Markdown files are rendered as styled HTML at the share link.
 
 **Inputs:**
 
 | Param | Required | Description |
 |-------|----------|-------------|
-| `filePath` | one of filePath/html | Path to `.html`, `.htm`, or `.zip` |
-| `html` | one of filePath/html | Raw HTML when no file exists |
+| `filePath` | one of filePath/html/markdown | Path to `.html`, `.htm`, `.md`, or `.zip` |
+| `html` | one of filePath/html/markdown | Raw HTML when no file exists |
+| `markdown` | one of filePath/html/markdown | Raw Markdown when no file exists |
 | `title` | no | Display title (defaults to filename) |
 | `visibility` | no | `public`, `private`, or `restricted` (default: `public`) |
-| `fileName` | no | Filename when using `html` |
+| `fileName` | no | Filename when using `html` or `markdown` |
 
 **Example prompts:**
 
+- "Publish `./report.md` to Relay as public."
+- "Publish this markdown research brief to Relay with restricted visibility."
 - "Publish `./report.html` to Relay as public."
-- "Publish this HTML dashboard to Relay with title 'Q2 Board Deck' and restricted visibility."
 
 ---
 

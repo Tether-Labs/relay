@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import {
@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { PageShell } from "@/components/layout/app-header";
 import { publishArtifact, ensureApiAuth, inviteToArtifact } from "@/lib/api";
+import { ARTIFACT_UPLOAD_ACCEPT, markdownPreviewDocument, titleFromFilename } from "@/lib/artifact-files";
 import { cn } from "@/lib/utils";
 
 type Step = "upload" | "preview" | "visibility";
@@ -94,18 +95,41 @@ export function PublishPage() {
   const [inviteEmails, setInviteEmails] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const previewUrl = useMemo(() => {
-    if (!file || !file.name.match(/\.html?$/i)) return null;
-    return URL.createObjectURL(file);
-  }, [file]);
-
   useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    if (file.name.match(/\.html?$/i)) {
+      objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+      return () => {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      };
+    }
+
+    if (file.name.match(/\.(md|markdown)$/i)) {
+      void file.text().then((text) => {
+        if (cancelled) return;
+        const html = markdownPreviewDocument(title || file.name, text);
+        objectUrl = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+        setPreviewUrl(objectUrl);
+      });
+      return () => {
+        cancelled = true;
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      };
+    }
+
+    setPreviewUrl(null);
+  }, [file, title]);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -120,7 +144,7 @@ export function PublishPage() {
   function pickFile(f: File) {
     setFile(f);
     if (!title) {
-      setTitle(f.name.replace(/\.(html|htm|zip)$/i, "").replace(/[-_]/g, " "));
+      setTitle(titleFromFilename(f.name));
     }
   }
 
@@ -193,7 +217,7 @@ export function PublishPage() {
             <>
               <CardHeader className="border-b">
                 <CardTitle>Upload</CardTitle>
-                <CardDescription>.html or .zip from Claude Code, Cursor, etc.</CardDescription>
+                <CardDescription>.html, .md, or .zip from Claude Code, Cursor, etc.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
                 <div className="space-y-2">
@@ -228,13 +252,13 @@ export function PublishPage() {
                   ) : (
                     <>
                       <p className="text-sm font-medium">Drop file or click to browse</p>
-                      <p className="text-xs text-muted-foreground">.html, .htm, .zip</p>
+                      <p className="text-xs text-muted-foreground">.html, .htm, .md, .zip</p>
                     </>
                   )}
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".html,.htm,.zip"
+                    accept={ARTIFACT_UPLOAD_ACCEPT}
                     className="sr-only"
                     onChange={onFileChange}
                   />

@@ -128,7 +128,7 @@ Example Cursor MCP config:
 }
 ```
 
-The server exposes `publish_artifact`, which accepts either a local `filePath` (`.html`, `.htm`, or `.zip`) or raw `html`, plus optional `title`, `fileName`, and `visibility`.
+The server exposes `publish_artifact`, which accepts a local `filePath` (`.html`, `.htm`, `.md`, or `.zip`), raw `html`, raw `markdown`, plus optional `title`, `fileName`, and `visibility`.
 
 ### Skills
 

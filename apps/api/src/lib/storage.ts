@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync, statSy
 import { join, extname, normalize, relative } from "node:path";
 import AdmZip from "adm-zip";
 import { getConfig } from "../config.js";
+import { isMarkdownFilename } from "./artifact-files.js";
 
 export function artifactDir(slug: string): string {
   const dir = join(getConfig().storageDir, slug);
@@ -21,17 +22,27 @@ export function extractZip(slug: string, zipBuffer: Buffer): string {
   const dir = artifactDir(slug);
   const zip = new AdmZip(zipBuffer);
   zip.extractAllTo(dir, true);
-  return findEntryHtml(dir);
+  return findEntryFile(dir);
 }
 
-function findEntryHtml(dir: string): string {
-  const candidates = ["index.html", "Index.html", "report.html"];
-  for (const name of candidates) {
+function findEntryFile(dir: string): string {
+  const htmlCandidates = ["index.html", "Index.html", "report.html", "README.html"];
+  for (const name of htmlCandidates) {
     if (existsSync(join(dir, name))) return name;
   }
+
   const htmlFiles = walk(dir).filter((f) => extname(f).toLowerCase() === ".html");
-  if (htmlFiles.length === 0) throw new Error("No HTML file found in upload");
-  return relative(dir, htmlFiles[0]!);
+  if (htmlFiles.length > 0) return relative(dir, htmlFiles[0]!);
+
+  const markdownCandidates = ["index.md", "README.md", "report.md"];
+  for (const name of markdownCandidates) {
+    if (existsSync(join(dir, name))) return name;
+  }
+
+  const markdownFiles = walk(dir).filter((f) => isMarkdownFilename(f));
+  if (markdownFiles.length > 0) return relative(dir, markdownFiles[0]!);
+
+  throw new Error("No HTML or Markdown file found in upload");
 }
 
 function walk(dir: string): string[] {

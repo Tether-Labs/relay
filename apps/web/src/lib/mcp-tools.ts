@@ -19,9 +19,9 @@ export const MCP_TOOLS: McpToolDoc[] = [
   },
   {
     name: "publish_artifact",
-    summary: "Publish a local HTML/zip file or raw HTML and return the share URL.",
-    examplePrompt: "Publish ./report.html to Relay as a public artifact.",
-    params: "filePath or html, optional title, visibility",
+    summary: "Publish a local HTML, Markdown, or zip file, or raw HTML/Markdown content, and return the share URL.",
+    examplePrompt: "Publish ./report.md to Relay as a public artifact.",
+    params: "filePath, html, or markdown; optional title, visibility",
   },
   {
     name: "list_artifacts",

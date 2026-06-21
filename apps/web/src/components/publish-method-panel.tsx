@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CURSOR_MCP_CONFIG, RELAY_MCP_PACKAGE } from "@/lib/mcp-tools";
+import { ARTIFACT_UPLOAD_ACCEPT } from "@/lib/artifact-files";
 import { McpToolsReference } from "@/components/mcp-tools-reference";
 
 type TabId = "web" | "cli" | "mcp" | "skills";
@@ -148,11 +149,11 @@ function WebDropZone() {
       >
         <UploadSimple className="mb-2 size-5 text-muted-foreground" />
         <p className="text-sm font-medium text-foreground">Drop file or click to browse</p>
-        <p className="mt-1 text-xs text-muted-foreground">.html, .htm, .zip</p>
+        <p className="mt-1 text-xs text-muted-foreground">.html, .htm, .md, .zip</p>
         <input
           ref={fileInputRef}
           type="file"
-          accept=".html,.htm,.zip"
+          accept={ARTIFACT_UPLOAD_ACCEPT}
           className="sr-only"
           onChange={(e) => {
             const f = e.target.files?.[0];

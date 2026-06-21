@@ -8,7 +8,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 const DEFAULT_API_URL = "https://relay-tether-labs.fly.dev";
-const SERVER_VERSION = "0.2.1";
+const SERVER_VERSION = "0.3.0";
 
 const Visibility = z.enum(["public", "private", "restricted"]);
 
@@ -80,30 +80,36 @@ function textResult(text: string) {
 }
 
 function titleFromName(fileName: string): string {
-  return basename(fileName).replace(/\.(html?|zip)$/i, "") || "Untitled artifact";
+  return basename(fileName).replace(/\.(html?|zip|md|markdown)$/i, "") || "Untitled artifact";
 }
 
 function contentTypeFor(fileName: string): string {
-  return extname(fileName).toLowerCase() === ".zip" ? "application/zip" : "text/html";
+  const ext = extname(fileName).toLowerCase();
+  if (ext === ".zip") return "application/zip";
+  if (ext === ".md" || ext === ".markdown") return "text/markdown";
+  return "text/html";
 }
 
 async function publishArtifact(input: {
   filePath?: string;
   html?: string;
+  markdown?: string;
   fileName?: string;
   title?: string;
   visibility?: z.infer<typeof Visibility>;
 }) {
-  if (!input.filePath && !input.html) {
-    throw new Error("Provide either filePath or html.");
+  if (!input.filePath && !input.html && !input.markdown) {
+    throw new Error("Provide filePath, html, or markdown.");
   }
 
-  const fileName = input.filePath ? basename(input.filePath) : (input.fileName ?? "artifact.html");
+  const fileName = input.filePath
+    ? basename(input.filePath)
+    : (input.fileName ?? (input.markdown ? "artifact.md" : "artifact.html"));
   const title = input.title?.trim() || titleFromName(fileName);
   const visibility = input.visibility ?? "public";
   const bytes = input.filePath
     ? await readFile(input.filePath)
-    : Buffer.from(input.html ?? "", "utf8");
+    : Buffer.from(input.markdown ?? input.html ?? "", "utf8");
 
   const form = new FormData();
   form.append("title", title);
@@ -239,14 +245,18 @@ server.registerTool(
   {
     title: "Publish Artifact",
     description:
-      "Upload and publish an HTML or zip artifact to Relay. Use filePath for a local .html, .htm, or .zip file, or html for raw content. Returns the public share URL, slug, title, and visibility. Defaults to public visibility.",
+      "Upload and publish an HTML, Markdown, or zip artifact to Relay. Use filePath for a local .html, .htm, .md, or .zip file, html for raw HTML, or markdown for raw Markdown content. Returns the share URL, slug, title, and visibility. Defaults to public visibility.",
     inputSchema: {
       filePath: z
         .string()
         .optional()
-        .describe("Absolute or relative path to a local .html, .htm, or .zip file on disk."),
+        .describe("Absolute or relative path to a local .html, .htm, .md, .markdown, or .zip file on disk."),
       html: z.string().optional().describe("Raw HTML string to publish when no local file exists yet."),
-      fileName: z.string().optional().describe("Filename to use when publishing raw html (default: artifact.html)."),
+      markdown: z.string().optional().describe("Raw Markdown string to publish when no local file exists yet."),
+      fileName: z
+        .string()
+        .optional()
+        .describe("Filename to use when publishing raw html or markdown (default: artifact.html or artifact.md)."),
       title: z.string().optional().describe("Human-readable artifact title. Defaults to the file name without extension."),
       visibility: Visibility.optional().describe(
         "Access level: public (anyone with link), private (owner only), or restricted (owner + invited emails). Default: public.",
