@@ -24,6 +24,21 @@ function getToken(): string | null {
   return null;
 }
 
+function tokenSource(): { source: "env" | "file" | "missing"; length: number; prefix: string | null } {
+  const envToken = process.env.RELAY_TOKEN;
+  if (envToken) {
+    return { source: "env", length: envToken.length, prefix: envToken.slice(0, 10) };
+  }
+
+  const sessionFile = join(homedir(), ".relay", "session");
+  if (existsSync(sessionFile)) {
+    const fileToken = readFileSync(sessionFile, "utf8").trim();
+    return { source: "file", length: fileToken.length, prefix: fileToken.slice(0, 10) };
+  }
+
+  return { source: "missing", length: 0, prefix: null };
+}
+
 function titleFromName(fileName: string): string {
   return basename(fileName).replace(/\.(html?|zip)$/i, "") || "Untitled artifact";
 }
@@ -83,6 +98,26 @@ const server = new McpServer({
   name: "relay",
   version: "0.1.0",
 });
+
+server.registerTool(
+  "auth_status",
+  {
+    title: "Auth Status",
+    description: "Check which Relay token source the MCP server can see without revealing the token.",
+    inputSchema: {},
+  },
+  async () => {
+    const status = tokenSource();
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Relay auth source: ${status.source}\nToken length: ${status.length}\nToken prefix: ${status.prefix ?? "none"}`,
+        },
+      ],
+    };
+  },
+);
 
 server.registerTool(
   "publish_artifact",
