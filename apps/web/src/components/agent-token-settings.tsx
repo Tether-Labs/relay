@@ -11,6 +11,8 @@ import {
   revokeAgentToken,
   type AgentTokenRecord,
 } from "@/lib/api";
+import { CURSOR_MCP_CONFIG } from "@/lib/mcp-tools";
+import { McpToolsReference } from "@/components/mcp-tools-reference";
 
 export function AgentTokenSettings() {
   const [agentTokens, setAgentTokens] = useState<AgentTokenRecord[]>([]);
@@ -147,19 +149,20 @@ export function AgentTokenSettings() {
         </CardHeader>
         <CardContent>
           <pre className="overflow-x-auto rounded-md border border-border/80 bg-muted/35 p-3 text-xs leading-relaxed text-foreground">
-            <code>{`{
-  "mcpServers": {
-    "relay": {
-      "command": "npx",
-      "args": ["-y", "@tether-labs.com/relay-mcp"],
-      "env": {
-        "RELAY_API_URL": "https://relay-tether-labs.fly.dev",
-        "RELAY_TOKEN": "relay_pat_..."
-      }
-    }
-  }
-}`}</code>
+            <code>{CURSOR_MCP_CONFIG}</code>
           </pre>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card/70">
+        <CardHeader>
+          <CardTitle>MCP tools</CardTitle>
+          <CardDescription>
+            After connecting Relay in Cursor, ask your agent to use these tools by name or natural language.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <McpToolsReference />
         </CardContent>
       </Card>
     </div>

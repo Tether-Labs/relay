@@ -8,7 +8,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 const DEFAULT_API_URL = "https://relay-tether-labs.fly.dev";
-const SERVER_VERSION = "0.2.0";
+const SERVER_VERSION = "0.2.1";
 
 const Visibility = z.enum(["public", "private", "restricted"]);
 
@@ -220,7 +220,8 @@ server.registerTool(
   "auth_status",
   {
     title: "Auth Status",
-    description: "Check which Relay token source the MCP server can see without revealing the token.",
+    description:
+      "Diagnose Relay MCP authentication. Returns whether RELAY_TOKEN is set via env or ~/.relay/session, plus token length and prefix — never the full secret. Call this first when publish or list calls fail with Unauthorized.",
     inputSchema: {},
   },
   async () =>
@@ -237,13 +238,19 @@ server.registerTool(
   "publish_artifact",
   {
     title: "Publish Artifact",
-    description: "Publish a local HTML/zip file or raw HTML content to Relay and return the share URL.",
+    description:
+      "Upload and publish an HTML or zip artifact to Relay. Use filePath for a local .html, .htm, or .zip file, or html for raw content. Returns the public share URL, slug, title, and visibility. Defaults to public visibility.",
     inputSchema: {
-      filePath: z.string().optional().describe("Path to a local .html, .htm, or .zip file."),
-      html: z.string().optional().describe("Raw HTML content to publish when no file exists yet."),
-      fileName: z.string().optional().describe("File name to use when publishing raw HTML."),
-      title: z.string().optional().describe("Artifact title. Defaults to the file name."),
-      visibility: Visibility.optional().describe("Access level. Defaults to public."),
+      filePath: z
+        .string()
+        .optional()
+        .describe("Absolute or relative path to a local .html, .htm, or .zip file on disk."),
+      html: z.string().optional().describe("Raw HTML string to publish when no local file exists yet."),
+      fileName: z.string().optional().describe("Filename to use when publishing raw html (default: artifact.html)."),
+      title: z.string().optional().describe("Human-readable artifact title. Defaults to the file name without extension."),
+      visibility: Visibility.optional().describe(
+        "Access level: public (anyone with link), private (owner only), or restricted (owner + invited emails). Default: public.",
+      ),
     },
   },
   async (input) => {
@@ -263,7 +270,8 @@ server.registerTool(
   "list_artifacts",
   {
     title: "List Artifacts",
-    description: "List artifacts you own and artifacts shared with you.",
+    description:
+      "List all Relay artifacts for the authenticated user. Returns owned artifacts (with view counts) and artifacts shared with the user via invite. Use this to find slugs before analytics, permission changes, or invites.",
     inputSchema: {},
   },
   async () => {
@@ -285,9 +293,10 @@ server.registerTool(
   "get_artifact_analytics",
   {
     title: "Get Artifact Analytics",
-    description: "View view counts, recent viewers, daily trends, and invite open rates for an artifact you own.",
+    description:
+      "Get view analytics for an artifact you own: total/unique views, views today and this week, authenticated vs anonymous breakdown, daily trend (14 days), top viewers, recent views, and invite open rates. Requires the artifact slug from list_artifacts or publish_artifact.",
     inputSchema: {
-      slug: z.string().describe("Artifact slug."),
+      slug: z.string().describe("Artifact slug identifier (e.g. abc123 from the /a/abc123 URL)."),
     },
   },
   async ({ slug }) => {
@@ -301,11 +310,11 @@ server.registerTool(
   {
     title: "Update Artifact Permissions",
     description:
-      "Change an artifact title or visibility. public = anyone with link, private = owner only, restricted = owner plus invited viewers.",
+      "Update an artifact's title and/or visibility. public = anyone with the link; private = owner only (fails if invitees exist — revoke them first); restricted = owner plus invited emails. Provide at least one of title or visibility.",
     inputSchema: {
-      slug: z.string().describe("Artifact slug."),
-      title: z.string().optional().describe("New artifact title."),
-      visibility: Visibility.optional().describe("New visibility level."),
+      slug: z.string().describe("Artifact slug to update."),
+      title: z.string().optional().describe("New display title for the artifact."),
+      visibility: Visibility.optional().describe("New visibility: public, private, or restricted."),
     },
   },
   async ({ slug, title, visibility }) => {
@@ -339,10 +348,13 @@ server.registerTool(
   {
     title: "Invite Artifact Viewers",
     description:
-      "Invite one or more email addresses to view a restricted artifact. Sends invite emails and sets visibility to restricted if needed.",
+      "Invite one or more people by email to view an artifact. Sends invite emails with access links. Automatically sets visibility to restricted if not already. Use after publishing or when sharing a private report with specific recipients.",
     inputSchema: {
-      slug: z.string().describe("Artifact slug."),
-      emails: z.array(z.string().email()).min(1).describe("Email addresses to invite."),
+      slug: z.string().describe("Artifact slug to share."),
+      emails: z
+        .array(z.string().email())
+        .min(1)
+        .describe("One or more email addresses to invite as viewers."),
     },
   },
   async ({ slug, emails }) => {

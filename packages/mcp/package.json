@@ -1,6 +1,6 @@
 {
   "name": "@tether-labs.com/relay-mcp",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Relay MCP server — publish HTML and zip artifacts from Cursor and other MCP clients",
   "license": "MIT",
   "type": "module",

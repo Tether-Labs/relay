@@ -5,6 +5,8 @@ import { Copy, Plugs, Sparkle, Terminal, UploadSimple, Globe } from "@phosphor-i
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CURSOR_MCP_CONFIG, RELAY_MCP_PACKAGE } from "@/lib/mcp-tools";
+import { McpToolsReference } from "@/components/mcp-tools-reference";
 
 type TabId = "web" | "cli" | "mcp" | "skills";
 
@@ -17,7 +19,6 @@ const TABS: { id: TabId; label: string; icon: typeof Globe }[] = [
 
 const CLI_COMMAND = "relay publish report.html";
 const SKILLS_COMMAND = "npx skills@latest add relay/skills";
-const MCP_COMMAND = "RELAY_TOKEN=relay_pat_... npx tsx /path/to/relay/packages/mcp/src/server.ts";
 
 const MCP_PLATFORMS = [
   { id: "cursor", label: "Cursor" },
@@ -30,13 +31,9 @@ const MCP_PLATFORMS = [
 
 type McpPlatform = (typeof MCP_PLATFORMS)[number]["id"];
 
-function mcpCommand(client: McpPlatform) {
-  return `${MCP_COMMAND} # ${client}`;
-}
-
-function copyCommand(command: string) {
-  navigator.clipboard.writeText(command);
-  toast.success("Copied to clipboard");
+function copyText(text: string, message = "Copied to clipboard") {
+  navigator.clipboard.writeText(text);
+  toast.success(message);
 }
 
 function PanelBody({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -46,9 +43,15 @@ function PanelBody({ children, className }: { children: React.ReactNode; classNa
 function CommandBlock({ command, prompt = "$" }: { command: string; prompt?: string | null }) {
   return (
     <div className="w-full min-w-0 max-w-full overflow-x-auto rounded-md border border-border/80 bg-muted/40 px-3 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <code className="block whitespace-nowrap font-mono text-[13px] leading-relaxed text-foreground">
-        {prompt ? <span className="select-none text-primary">{prompt} </span> : null}
-        {command}
+      <code className="block whitespace-pre font-mono text-[13px] leading-relaxed text-foreground">
+        {prompt ? (
+          <>
+            <span className="select-none text-primary">{prompt} </span>
+            {command}
+          </>
+        ) : (
+          command
+        )}
       </code>
     </div>
   );
@@ -77,11 +80,14 @@ function McpCommandPanel({
   platform: McpPlatform;
   onPlatformChange: (platform: McpPlatform) => void;
 }) {
-  const command = mcpCommand(platform);
-
   return (
     <PanelBody className="space-y-3">
-      <CommandBlock command={command} prompt={null} />
+      <p className="text-xs text-muted-foreground">
+        Install <code className="font-mono text-foreground">{RELAY_MCP_PACKAGE}</code>, create a token in{" "}
+        <span className="text-foreground">Account → MCP & tokens</span>, then add this config for{" "}
+        {MCP_PLATFORMS.find((item) => item.id === platform)?.label ?? "your client"}:
+      </p>
+      <CommandBlock command={CURSOR_MCP_CONFIG} prompt={null} />
       <div className="flex min-w-0 flex-wrap gap-1.5">
         {MCP_PLATFORMS.map(({ id, label }) => (
           <button
@@ -98,6 +104,10 @@ function McpCommandPanel({
             {label}
           </button>
         ))}
+      </div>
+      <div className="rounded-md border border-border/70 bg-muted/20 p-3">
+        <p className="mb-2 text-xs font-medium text-foreground">Available tools</p>
+        <McpToolsReference compact />
       </div>
     </PanelBody>
   );
@@ -177,13 +187,13 @@ export function PublishMethodPanel({ className }: { className?: string }) {
   const activeIcon = TABS.find((t) => t.id === activeTab)!.icon;
   const ActiveIcon = activeIcon;
 
-  const activeCommand =
+  const activeCopyText =
     activeTab === "cli"
       ? CLI_COMMAND
       : activeTab === "skills"
         ? SKILLS_COMMAND
         : activeTab === "mcp"
-          ? mcpCommand(mcpPlatform)
+          ? CURSOR_MCP_CONFIG
           : null;
 
   return (
@@ -217,11 +227,11 @@ export function PublishMethodPanel({ className }: { className?: string }) {
           </div>
           <button
             type="button"
-            onClick={() => activeCommand && copyCommand(activeCommand)}
-            disabled={!activeCommand}
+            onClick={() => activeCopyText && copyText(activeCopyText)}
+            disabled={!activeCopyText}
             className={cn(
               "size-7 shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none",
-              !activeCommand && "invisible",
+              !activeCopyText && "invisible",
             )}
             aria-label="Copy command"
           >
@@ -230,21 +240,21 @@ export function PublishMethodPanel({ className }: { className?: string }) {
         </div>
 
         {activeTab === "web" ? (
-            <>
-              <SignedIn>
-                <WebDropZone />
-              </SignedIn>
-              <SignedOut>
-                <WebSignedOut />
-              </SignedOut>
-            </>
-          ) : activeTab === "cli" ? (
-            <CliCommandPanel />
-          ) : activeTab === "skills" ? (
-            <SkillsCommandPanel />
-          ) : (
-            <McpCommandPanel platform={mcpPlatform} onPlatformChange={setMcpPlatform} />
-          )}
+          <>
+            <SignedIn>
+              <WebDropZone />
+            </SignedIn>
+            <SignedOut>
+              <WebSignedOut />
+            </SignedOut>
+          </>
+        ) : activeTab === "cli" ? (
+          <CliCommandPanel />
+        ) : activeTab === "skills" ? (
+          <SkillsCommandPanel />
+        ) : (
+          <McpCommandPanel platform={mcpPlatform} onPlatformChange={setMcpPlatform} />
+        )}
       </div>
     </div>
   );
