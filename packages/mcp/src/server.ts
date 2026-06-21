@@ -8,6 +8,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 
 const DEFAULT_API_URL = "https://relay-tether-labs.fly.dev";
+const SERVER_VERSION = "0.2.0";
 
 const Visibility = z.enum(["public", "private", "restricted"]);
 
@@ -22,6 +23,14 @@ function getToken(): string | null {
   if (existsSync(sessionFile)) return readFileSync(sessionFile, "utf8").trim();
 
   return null;
+}
+
+function requireToken(): string {
+  const token = getToken();
+  if (!token) {
+    throw new Error("Missing Relay auth. Set RELAY_TOKEN (relay_pat_...) or save a token to ~/.relay/session.");
+  }
+  return token;
 }
 
 function tokenSource(): { source: "env" | "file" | "missing"; length: number; prefix: string | null } {
@@ -39,6 +48,37 @@ function tokenSource(): { source: "env" | "file" | "missing"; length: number; pr
   return { source: "missing", length: 0, prefix: null };
 }
 
+async function relayApi<T = unknown>(
+  path: string,
+  init: RequestInit & { json?: unknown } = {},
+): Promise<T> {
+  const token = requireToken();
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+
+  if (init.json !== undefined) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const { json, ...rest } = init;
+  const res = await fetch(`${getApiUrl()}${path}`, {
+    ...rest,
+    headers,
+    body: json !== undefined ? JSON.stringify(json) : init.body,
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.error ?? `Relay API failed (${res.status})`);
+  }
+
+  return data as T;
+}
+
+function textResult(text: string) {
+  return { content: [{ type: "text" as const, text }] };
+}
+
 function titleFromName(fileName: string): string {
   return basename(fileName).replace(/\.(html?|zip)$/i, "") || "Untitled artifact";
 }
@@ -54,11 +94,6 @@ async function publishArtifact(input: {
   title?: string;
   visibility?: z.infer<typeof Visibility>;
 }) {
-  const token = getToken();
-  if (!token) {
-    throw new Error("Missing Relay auth. Set RELAY_TOKEN (relay_pat_...) or save a token to ~/.relay/session.");
-  }
-
   if (!input.filePath && !input.html) {
     throw new Error("Provide either filePath or html.");
   }
@@ -75,6 +110,7 @@ async function publishArtifact(input: {
   form.append("visibility", visibility);
   form.append("file", new Blob([bytes], { type: contentTypeFor(fileName) }), fileName);
 
+  const token = requireToken();
   const res = await fetch(`${getApiUrl()}/api/artifacts`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
@@ -94,9 +130,90 @@ async function publishArtifact(input: {
   };
 }
 
+type ArtifactSummary = {
+  slug: string;
+  title: string;
+  visibility: z.infer<typeof Visibility>;
+  url: string;
+  created_at: number;
+  totalViews?: number;
+  uniqueViewers?: number;
+};
+
+type ListArtifactsResponse = {
+  owned: ArtifactSummary[];
+  sharedWithMe: ArtifactSummary[];
+};
+
+type AnalyticsSummary = {
+  totalViews: number;
+  uniqueViewers: number;
+  viewsToday: number;
+  viewsThisWeek: number;
+  authenticatedViews: number;
+  anonymousViews: number;
+  lastViewedAt: number | null;
+};
+
+type ArtifactAnalyticsResponse = {
+  summary: AnalyticsSummary;
+  viewsByDay: Array<{ date: string; views: number }>;
+  recentViews: Array<{ label: string; viewedAt: number; authenticated: boolean }>;
+  viewers: Array<{ label: string; email: string | null; viewCount: number; lastViewedAt: number }>;
+  invites: Array<{ email: string; invitedAt: number; opened: boolean; viewCount: number }>;
+};
+
+function formatArtifactLine(artifact: ArtifactSummary): string {
+  const views =
+    artifact.totalViews !== undefined
+      ? ` · ${artifact.totalViews} views · ${artifact.uniqueViewers ?? 0} unique`
+      : "";
+  return `- ${artifact.title} (${artifact.slug}) · ${artifact.visibility}${views}\n  ${artifact.url}`;
+}
+
+function formatAnalyticsSummary(slug: string, analytics: ArtifactAnalyticsResponse): string {
+  const { summary, viewsByDay, recentViews, viewers, invites } = analytics;
+  const lines = [
+    `Analytics for ${slug}`,
+    "",
+    `Total views: ${summary.totalViews}`,
+    `Unique viewers: ${summary.uniqueViewers}`,
+    `Views today: ${summary.viewsToday}`,
+    `Views this week: ${summary.viewsThisWeek}`,
+    `Authenticated views: ${summary.authenticatedViews}`,
+    `Anonymous views: ${summary.anonymousViews}`,
+    summary.lastViewedAt ? `Last viewed: ${new Date(summary.lastViewedAt).toISOString()}` : "Last viewed: never",
+    "",
+    "Views by day (last 14 days):",
+    ...(viewsByDay.length > 0
+      ? viewsByDay.map((day) => `  ${day.date}: ${day.views}`)
+      : ["  (none)"]),
+    "",
+    "Top viewers:",
+    ...(viewers.length > 0
+      ? viewers.slice(0, 10).map((viewer) => `  ${viewer.label}: ${viewer.viewCount} views`)
+      : ["  (none)"]),
+    "",
+    "Recent views:",
+    ...(recentViews.length > 0
+      ? recentViews.slice(0, 10).map((view) => `  ${view.label} · ${new Date(view.viewedAt).toISOString()}`)
+      : ["  (none)"]),
+    "",
+    "Invited viewers:",
+    ...(invites.length > 0
+      ? invites.map(
+          (invite) =>
+            `  ${invite.email} · ${invite.opened ? "opened" : "not opened"} · ${invite.viewCount} views`,
+        )
+      : ["  (none)"]),
+  ];
+
+  return lines.join("\n");
+}
+
 const server = new McpServer({
   name: "relay",
-  version: "0.1.0",
+  version: SERVER_VERSION,
 });
 
 server.registerTool(
@@ -106,17 +223,14 @@ server.registerTool(
     description: "Check which Relay token source the MCP server can see without revealing the token.",
     inputSchema: {},
   },
-  async () => {
-    const status = tokenSource();
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Relay auth source: ${status.source}\nToken length: ${status.length}\nToken prefix: ${status.prefix ?? "none"}`,
-        },
-      ],
-    };
-  },
+  async () =>
+    textResult(
+      [
+        `Relay auth source: ${tokenSource().source}`,
+        `Token length: ${tokenSource().length}`,
+        `Token prefix: ${tokenSource().prefix ?? "none"}`,
+      ].join("\n"),
+    ),
 );
 
 server.registerTool(
@@ -134,20 +248,116 @@ server.registerTool(
   },
   async (input) => {
     const result = await publishArtifact(input);
+    return textResult(
+      [
+        `Published "${result.title}" to Relay.`,
+        `URL: ${result.url}`,
+        `Slug: ${result.slug}`,
+        `Visibility: ${result.visibility}`,
+      ].join("\n"),
+    );
+  },
+);
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: [
-            `Published "${result.title}" to Relay.`,
-            `URL: ${result.url}`,
-            `Slug: ${result.slug}`,
-            `Visibility: ${result.visibility}`,
-          ].join("\n"),
-        },
-      ],
-    };
+server.registerTool(
+  "list_artifacts",
+  {
+    title: "List Artifacts",
+    description: "List artifacts you own and artifacts shared with you.",
+    inputSchema: {},
+  },
+  async () => {
+    const data = await relayApi<ListArtifactsResponse>("/api/artifacts");
+
+    const lines = [
+      `Owned artifacts (${data.owned.length}):`,
+      ...(data.owned.length > 0 ? data.owned.map(formatArtifactLine) : ["  (none)"]),
+      "",
+      `Shared with me (${data.sharedWithMe.length}):`,
+      ...(data.sharedWithMe.length > 0 ? data.sharedWithMe.map(formatArtifactLine) : ["  (none)"]),
+    ];
+
+    return textResult(lines.join("\n"));
+  },
+);
+
+server.registerTool(
+  "get_artifact_analytics",
+  {
+    title: "Get Artifact Analytics",
+    description: "View view counts, recent viewers, daily trends, and invite open rates for an artifact you own.",
+    inputSchema: {
+      slug: z.string().describe("Artifact slug."),
+    },
+  },
+  async ({ slug }) => {
+    const analytics = await relayApi<ArtifactAnalyticsResponse>(`/api/artifacts/${slug}/analytics`);
+    return textResult(formatAnalyticsSummary(slug, analytics));
+  },
+);
+
+server.registerTool(
+  "update_artifact_permissions",
+  {
+    title: "Update Artifact Permissions",
+    description:
+      "Change an artifact title or visibility. public = anyone with link, private = owner only, restricted = owner plus invited viewers.",
+    inputSchema: {
+      slug: z.string().describe("Artifact slug."),
+      title: z.string().optional().describe("New artifact title."),
+      visibility: Visibility.optional().describe("New visibility level."),
+    },
+  },
+  async ({ slug, title, visibility }) => {
+    if (title === undefined && visibility === undefined) {
+      throw new Error("Provide at least one of title or visibility.");
+    }
+
+    const body: { title?: string; visibility?: z.infer<typeof Visibility> } = {};
+    if (title !== undefined) body.title = title;
+    if (visibility !== undefined) body.visibility = visibility;
+
+    const result = await relayApi<{ ok: boolean; title?: string; visibility?: z.infer<typeof Visibility> }>(
+      `/api/artifacts/${slug}`,
+      { method: "PATCH", json: body },
+    );
+
+    return textResult(
+      [
+        `Updated permissions for ${slug}.`,
+        result.title ? `Title: ${result.title}` : null,
+        result.visibility ? `Visibility: ${result.visibility}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    );
+  },
+);
+
+server.registerTool(
+  "invite_artifact_viewers",
+  {
+    title: "Invite Artifact Viewers",
+    description:
+      "Invite one or more email addresses to view a restricted artifact. Sends invite emails and sets visibility to restricted if needed.",
+    inputSchema: {
+      slug: z.string().describe("Artifact slug."),
+      emails: z.array(z.string().email()).min(1).describe("Email addresses to invite."),
+    },
+  },
+  async ({ slug, emails }) => {
+    const result = await relayApi<{ ok: boolean; invited: number }>(`/api/artifacts/${slug}/invite`, {
+      method: "POST",
+      json: { emails },
+    });
+
+    return textResult(
+      [
+        `Invited ${result.invited} viewer${result.invited === 1 ? "" : "s"} to ${slug}.`,
+        `Emails: ${emails.join(", ")}`,
+        "Artifact visibility is restricted to owner plus invited viewers.",
+      ].join("\n"),
+    );
   },
 );
 
