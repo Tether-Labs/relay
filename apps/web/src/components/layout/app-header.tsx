@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { SquaresFour, Plus } from "@phosphor-icons/react";
+import { Key, Plus, SquaresFour } from "@phosphor-icons/react";
 import {
   SignedIn,
   SignedOut,
@@ -8,6 +8,7 @@ import {
   UserButton,
 } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
+import { AgentTokenSettings } from "@/components/agent-token-settings";
 
 export function AppHeader() {
   const { pathname } = useLocation();
@@ -37,7 +38,14 @@ export function AppHeader() {
                 </Button>
               </>
             )}
-            <UserButton afterSignOutUrl="/" userProfileMode="modal" />
+            <UserButton afterSignOutUrl="/" userProfileMode="modal">
+              <UserButton.MenuItems>
+                <UserButton.Action label="MCP & tokens" labelIcon={<Key />} open="mcp" />
+              </UserButton.MenuItems>
+              <UserButton.UserProfilePage label="MCP & tokens" url="mcp" labelIcon={<Key />}>
+                <AgentTokenSettings />
+              </UserButton.UserProfilePage>
+            </UserButton>
           </SignedIn>
           <SignedOut>
             <SignInButton mode="modal">
