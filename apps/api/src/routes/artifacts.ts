@@ -67,12 +67,31 @@ api.get("/artifacts", async (c) => {
     }),
   );
 
+  const sharedWithStats = await Promise.all(
+    shared.map(async ({ artifact: a }) => {
+      const [stats] = await db
+        .select({ totalViews: count() })
+        .from(artifactViews)
+        .where(eq(artifactViews.artifact_id, a.id));
+
+      const uniqueRows = await db
+        .select({ viewer_hash: artifactViews.viewer_hash })
+        .from(artifactViews)
+        .where(eq(artifactViews.artifact_id, a.id))
+        .groupBy(artifactViews.viewer_hash);
+
+      return {
+        ...a,
+        url: `${getConfig().apiUrl}/a/${a.slug}`,
+        totalViews: stats?.totalViews ?? 0,
+        uniqueViewers: uniqueRows.length,
+      };
+    }),
+  );
+
   return c.json({
     owned: ownedWithStats,
-    sharedWithMe: shared.map((s) => ({
-      ...s.artifact,
-      url: `${getConfig().apiUrl}/a/${s.artifact.slug}`,
-    })),
+    sharedWithMe: sharedWithStats,
   });
 });
 

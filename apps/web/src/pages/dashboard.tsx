@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, useUser } from "@clerk/clerk-react";
-import { Globe, Plus } from "@phosphor-icons/react";
+import { Globe, Plus, UsersThree } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { CountBadge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,6 +25,7 @@ export function DashboardPage() {
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
   const [owned, setOwned] = useState<ArtifactRecord[]>([]);
+  const [sharedWithMe, setSharedWithMe] = useState<ArtifactRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,14 +37,18 @@ export function DashboardPage() {
 
     ensureApiAuth()
       .then(() => listArtifacts())
-      .then((data) => setOwned(data.owned))
+      .then((data) => {
+        setOwned(data.owned);
+        setSharedWithMe(data.sharedWithMe);
+      })
       .catch((e) => {
         if (e instanceof AuthError) navigate("/login?next=/dashboard");
       })
       .finally(() => setLoading(false));
   }, [isLoaded, isSignedIn, navigate]);
 
-  const { page, setPage, pageCount, paginatedItems } = usePagination(owned, ARTIFACTS_PAGE_SIZE);
+  const ownedPagination = usePagination(owned, ARTIFACTS_PAGE_SIZE);
+  const sharedPagination = usePagination(sharedWithMe, ARTIFACTS_PAGE_SIZE);
 
   if (!isLoaded || loading) return <PageLoading />;
 
@@ -90,12 +95,50 @@ export function DashboardPage() {
             </CardContent>
           </Card>
         ) : (
-          <PaginatedArtifactGrid page={page} pageCount={pageCount} onPageChange={setPage}>
-            {paginatedItems.map((a) => (
+          <PaginatedArtifactGrid
+            page={ownedPagination.page}
+            pageCount={ownedPagination.pageCount}
+            onPageChange={ownedPagination.setPage}
+          >
+            {ownedPagination.paginatedItems.map((a) => (
               <ArtifactGridCard key={a.id} artifact={a} />
             ))}
           </PaginatedArtifactGrid>
         )}
+
+        <section className="mt-14">
+          <div className="mb-6">
+            <h2 className="flex items-center gap-x-2 font-heading text-xl font-semibold tracking-tight text-foreground">
+              <UsersThree className="size-5 text-muted-foreground" />
+              <span>Shared with me</span>
+              <CountBadge>
+                {sharedWithMe.length} {sharedWithMe.length === 1 ? "artifact" : "artifacts"}
+              </CountBadge>
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Restricted artifacts you were invited to view.
+            </p>
+          </div>
+
+          {sharedWithMe.length === 0 ? (
+            <Card className="border-dashed bg-card/60">
+              <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                Nothing shared with you yet. When someone invites your email to a restricted artifact, it
+                will show up here.
+              </CardContent>
+            </Card>
+          ) : (
+            <PaginatedArtifactGrid
+              page={sharedPagination.page}
+              pageCount={sharedPagination.pageCount}
+              onPageChange={sharedPagination.setPage}
+            >
+              {sharedPagination.paginatedItems.map((a) => (
+                <ArtifactGridCard key={a.id} artifact={a} variant="shared" />
+              ))}
+            </PaginatedArtifactGrid>
+          )}
+        </section>
       </div>
     </PageShell>
   );

@@ -15,7 +15,14 @@ function formatDate(ts: number) {
   });
 }
 
-export function ArtifactGridCard({ artifact }: { artifact: ArtifactRecord }) {
+export function ArtifactGridCard({
+  artifact,
+  variant = "owned",
+}: {
+  artifact: ArtifactRecord;
+  /** Shared artifacts open the viewer; owned artifacts open the management page. */
+  variant?: "owned" | "shared";
+}) {
   function copyLink(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
@@ -25,10 +32,11 @@ export function ArtifactGridCard({ artifact }: { artifact: ArtifactRecord }) {
 
   const views = artifact.totalViews ?? 0;
   const unique = artifact.uniqueViewers ?? 0;
+  const viewUrl = getArtifactViewUrl(artifact.slug);
+  const href = variant === "shared" ? viewUrl : `/artifacts/${artifact.slug}`;
 
-  return (
-    <Link to={`/artifacts/${artifact.slug}`} className="group block h-full">
-      <Card className="paper-sheet-hover flex h-full flex-col gap-0 overflow-hidden p-0">
+  const card = (
+    <Card className="paper-sheet-hover flex h-full flex-col gap-0 overflow-hidden p-0">
         <ArtifactPreview
           slug={artifact.slug}
           visibility={artifact.visibility}
@@ -88,7 +96,7 @@ export function ArtifactGridCard({ artifact }: { artifact: ArtifactRecord }) {
                   asChild
                 >
                   <a
-                    href={getArtifactViewUrl(artifact.slug)}
+                    href={viewUrl}
                     target="_blank"
                     rel="noreferrer"
                     aria-label="Open in new tab"
@@ -102,6 +110,19 @@ export function ArtifactGridCard({ artifact }: { artifact: ArtifactRecord }) {
           </div>
         </div>
       </Card>
+  );
+
+  if (variant === "shared") {
+    return (
+      <a href={href} className="group block h-full">
+        {card}
+      </a>
+    );
+  }
+
+  return (
+    <Link to={href} className="group block h-full">
+      {card}
     </Link>
   );
 }
