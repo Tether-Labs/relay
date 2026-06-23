@@ -2,7 +2,7 @@
  * Seeds the Product Hunt demo artifact at /a/demo
  * Run: npm run seed:demo
  */
-import "dotenv/config";
+import "../src/load-env.js";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { migrate } from "../src/db/migrate.js";

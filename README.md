@@ -19,11 +19,15 @@ Run everything from the **repo root**. You need both the API and the web app run
 ```bash
 npm install
 
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
+cp apps/web/.env.local.example apps/web/.env.local
+cp apps/web/.env.production.example apps/web/.env.production
+cp apps/api/.env.local.example apps/api/.env.local
+cp apps/api/.env.production.example apps/api/.env.production
 ```
 
-Set Clerk keys in those files (`VITE_CLERK_PUBLISHABLE_KEY` in web, `CLERK_SECRET_KEY` in api — see [Clerk setup](#clerk-setup) below). Then:
+Paste Clerk keys into those files (`pk_test_` / `sk_test_` in `.env.local`, `pk_live_` / `sk_live_` in `.env.production`). If you still have old plain `.env` files, move their contents into `.env.local` and delete `.env`.
+
+Then:
 
 ```bash
 npm run dev          # API + web together → localhost:3847 & localhost:5173
@@ -181,41 +185,61 @@ SQLite (`DATABASE_URL`) stores users, sessions, artifacts, access grants, and vi
 
 ## Environment
 
-### API (`apps/api/.env`)
+Relay uses **gitignored env files** — never commit real keys.
 
-```bash
-PORT=3847
-API_URL=http://localhost:3847
-WEB_URL=http://localhost:5173
-CORS_ORIGINS=                          # comma-separated extra origins
-COOKIE_DOMAIN=                         # e.g. .relay.so when API + web share a parent domain
-DATABASE_URL=./data/relay.db
-STORAGE_DIR=./storage
-SESSION_SECRET=change-me-in-production
-CLERK_SECRET_KEY=sk_test_...
+| File | Purpose |
+|------|---------|
+| `apps/web/.env.local` | Local dev (`npm run dev`) — `pk_test_...` |
+| `apps/web/.env.production` | Production web — `pk_live_...`; used by `npm run deploy:web` |
+| `apps/api/.env.local` | Local API — `sk_test_...` |
+| `apps/api/.env.production` | Production API — `sk_live_...`; used by `npm run sync:fly-secrets` |
 
-# Email (Resend) — restricted-artifact invite emails
-RESEND_API_KEY=re_xxxxxxxxx            # optional locally; links log to terminal when unset
-EMAIL_FROM="Relay <noreply@tether-labs.com>"
-LOG_MAGIC_LINKS=1                      # log invite links to terminal while debugging
-```
+Copy from the matching `*.example` templates in each app directory.
 
-When web and API are on different production origins, API cookies use `SameSite=None; Secure`. Set `COOKIE_DOMAIN` only when both origins share a parent domain.
+### Web (Vite)
 
-### Web (`apps/web/.env`)
+**`.env.local`** — local dev:
 
 ```bash
 VITE_API_URL=http://localhost:3847
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
 ```
 
+**`.env.production`** — deploy source of truth:
+
+```bash
+VITE_API_URL=https://relay-tether-labs.fly.dev
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_...
+```
+
+Deploy web from `.env.production`:
+
+```bash
+npm run deploy:web
+```
+
+Vite loads `.env.production` automatically for `npm run build`. Local `.env*` files are excluded from Vercel uploads (`.vercelignore`).
+
+### API (Fly)
+
+**`.env.local`** — local dev (see `apps/api/.env.local.example`).
+
+**`.env.production`** — sync secrets to Fly, then deploy:
+
+```bash
+npm run sync:fly-secrets   # reads apps/api/.env.production → flyctl secrets set
+npm run deploy:api         # sync secrets + flyctl deploy
+```
+
+On Fly, env comes from **secrets**, not files. `.env.production` is your local copy of what should be on Fly.
+
+When web and API are on different production origins, API cookies use `SameSite=None; Secure`. Set `COOKIE_DOMAIN` only when both origins share a parent domain.
+
 ## Production
 
-- Deploy **`apps/api`** to Fly.io (`apps/api/fly.toml`). Mount a volume at `/data` for SQLite + uploads.
-- Deploy **`apps/web`** to Vercel (`apps/web/vercel.json`). Set `VITE_API_URL` and `VITE_CLERK_PUBLISHABLE_KEY`.
-- Set API secrets: `CLERK_SECRET_KEY`, `SESSION_SECRET`, `WEB_URL`, `API_URL`, `RESEND_API_KEY`, etc.
-- Set `CORS_ORIGINS` for any additional web origins.
-- In Clerk, add production redirect URLs for your web domain.
+- Deploy **`apps/web`** from `apps/web/.env.production`: `npm run deploy:web` (Vercel)
+- Deploy **`apps/api`** from `apps/api/.env.production`: `npm run deploy:api` (Fly secrets + deploy)
+- In Clerk, add production redirect URLs for `https://relay.tether-labs.com`
 
 Example Fly first deploy:
 

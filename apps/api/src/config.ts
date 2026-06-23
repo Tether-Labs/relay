@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "./load-env.js";
 import { z } from "zod";
 import { isResendEnabled } from "./lib/resend-config.js";
 
