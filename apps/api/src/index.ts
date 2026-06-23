@@ -50,6 +50,10 @@ app.route("/", viewRoute);
 async function main() {
   await migrate();
 
+  if (process.env.NODE_ENV === "production" && !config.clerkSecretKey) {
+    console.warn("CLERK_SECRET_KEY is not set — Clerk JWT auth will fail with 401 Unauthorized");
+  }
+
   serve({ fetch: app.fetch, port: config.port, hostname: "0.0.0.0" }, (info) => {
     console.log(`Relay API at http://localhost:${info.port}`);
     console.log(`Relay web URL: ${config.webUrl}`);

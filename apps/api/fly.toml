@@ -2,7 +2,7 @@
 # First deploy:
 #   flyctl apps create relay-tether-labs
 #   flyctl volumes create relay_data --region sjc --size 1
-#   flyctl secrets set SESSION_SECRET=... API_URL=https://relay-tether-labs.fly.dev WEB_URL=https://your-vercel-url.vercel.app
+#   flyctl secrets set SESSION_SECRET=... CLERK_SECRET_KEY=sk_live_... API_URL=https://relay-tether-labs.fly.dev WEB_URL=https://relay.tether-labs.com
 #   flyctl deploy
 
 app = "relay-tether-labs"

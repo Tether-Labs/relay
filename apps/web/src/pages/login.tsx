@@ -13,7 +13,7 @@ export function LoginPage() {
         <SignIn
           routing="path"
           path="/login"
-          signUpUrl="/sign-up"
+          signUpUrl={`/sign-up?next=${encodeURIComponent(next)}`}
           forceRedirectUrl={next}
           initialValues={email ? { emailAddress: email } : undefined}
         />

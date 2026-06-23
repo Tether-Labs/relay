@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Key, Plus, SquaresFour } from "@phosphor-icons/react";
 import {
+  ClerkLoaded,
   SignedIn,
   SignedOut,
   SignInButton,
@@ -21,42 +22,41 @@ export function AppHeader() {
           Relay
         </Link>
         <nav className="flex items-center gap-2">
-          <SignedIn>
-            {!isDashboard && (
-              <>
-                <Button variant="ghost" size="sm" className="hidden text-muted-foreground sm:inline-flex" asChild>
-                  <Link to="/dashboard">
-                    <SquaresFour />
-                    Dashboard
-                  </Link>
+          <ClerkLoaded>
+            <SignedIn>
+              {!isDashboard && (
+                <>
+                  <Button variant="ghost" size="sm" className="hidden text-muted-foreground sm:inline-flex" asChild>
+                    <Link to="/dashboard">
+                      <SquaresFour />
+                      Dashboard
+                    </Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link to="/publish">
+                      <Plus />
+                      New
+                    </Link>
+                  </Button>
+                </>
+              )}
+              <UserButton afterSignOutUrl="/" userProfileMode="modal">
+                <UserButton.UserProfilePage label="MCP & tokens" url="mcp" labelIcon={<Key />}>
+                  <AgentTokenSettings />
+                </UserButton.UserProfilePage>
+              </UserButton>
+            </SignedIn>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button variant="ghost" size="sm">
+                  Sign in
                 </Button>
-                <Button size="sm" asChild>
-                  <Link to="/publish">
-                    <Plus />
-                    New
-                  </Link>
-                </Button>
-              </>
-            )}
-            <UserButton afterSignOutUrl="/" userProfileMode="modal">
-              <UserButton.MenuItems>
-                <UserButton.Action label="MCP & tokens" labelIcon={<Key />} open="mcp" />
-              </UserButton.MenuItems>
-              <UserButton.UserProfilePage label="MCP & tokens" url="mcp" labelIcon={<Key />}>
-                <AgentTokenSettings />
-              </UserButton.UserProfilePage>
-            </UserButton>
-          </SignedIn>
-          <SignedOut>
-            <SignInButton mode="modal">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <Button size="sm">Get started</Button>
-            </SignUpButton>
-          </SignedOut>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <Button size="sm">Get started</Button>
+              </SignUpButton>
+            </SignedOut>
+          </ClerkLoaded>
         </nav>
       </div>
     </header>
