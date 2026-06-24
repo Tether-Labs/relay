@@ -233,6 +233,15 @@ npm run deploy:api         # sync secrets + flyctl deploy
 
 On Fly, env comes from **secrets**, not files. `.env.production` is your local copy of what should be on Fly.
 
+**Fly auth for deploy:** `npm run deploy:api` reads your token from `flyctl auth login` (`~/.fly/config.yml`) or `FLY_API_TOKEN`. For GitHub Actions, add a repo secret:
+
+```bash
+flyctl tokens create deploy -a relay-tether-labs
+# GitHub → Tether-Labs/relay → Settings → Secrets → FLY_API_TOKEN
+```
+
+Pushes to `main` that touch `apps/api/**` also auto-deploy via `.github/workflows/deploy-api.yml`.
+
 When web and API are on different production origins, API cookies use `SameSite=None; Secure`. Set `COOKIE_DOMAIN` only when both origins share a parent domain.
 
 ## Production

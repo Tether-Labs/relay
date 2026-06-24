@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
 import { envFilePath, loadEnvFile } from "./env-from-file.mjs";
+import { flyProcessEnv } from "./fly-env.mjs";
 
 const APP = process.env.FLY_APP ?? "relay-tether-labs";
 const env = loadEnvFile(envFilePath("apps/api/.env.production"));
@@ -31,6 +32,7 @@ const args = Object.entries(secrets).flatMap(([key, value]) => [`${key}=${value}
 console.log(`Setting Fly secrets on ${APP}...`);
 const result = spawnSync("flyctl", ["secrets", "set", ...args, "--app", APP], {
   stdio: "inherit",
+  env: flyProcessEnv(),
 });
 
 process.exit(result.status ?? 1);
