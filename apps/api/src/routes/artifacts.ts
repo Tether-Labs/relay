@@ -15,6 +15,7 @@ import { isSupportedArtifactUpload, isZipFilename } from "../lib/artifact-files.
 import { sessionMiddleware, requireApiSession } from "../middleware/session.js";
 import { getArtifactBySlug } from "../lib/permissions.js";
 import { sendInviteLink, normalizeEmail } from "../lib/email.js";
+import { webLoginForArtifactUrl } from "../lib/artifact-links.js";
 import {
   getArtifactAnalytics,
   getArtifactViewRows,
@@ -296,8 +297,7 @@ api.post(
         });
       }
 
-      const artifactUrl = `${config.apiUrl}/a/${slug}`;
-      const inviteUrl = `${config.webUrl}/login?next=${encodeURIComponent(artifactUrl)}&email=${encodeURIComponent(email)}`;
+      const inviteUrl = webLoginForArtifactUrl(config.webUrl, slug, email);
       await sendInviteLink(email, artifact.title, inviteUrl);
     }
 

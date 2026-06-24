@@ -1,10 +1,11 @@
 import { useSearchParams } from "react-router-dom";
 import { SignIn } from "@clerk/clerk-react";
 import { PageShell } from "@/components/layout/app-header";
+import { safeNextPath } from "@/lib/redirect";
 
 export function LoginPage() {
   const [searchParams] = useSearchParams();
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = safeNextPath(searchParams.get("next"));
   const email = searchParams.get("email") ?? undefined;
 
   return (

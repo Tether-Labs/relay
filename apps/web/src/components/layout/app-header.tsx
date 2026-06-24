@@ -26,10 +26,10 @@ export function AppHeader() {
             <SignedIn>
               {!isDashboard && (
                 <>
-                  <Button variant="ghost" size="sm" className="hidden text-muted-foreground sm:inline-flex" asChild>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground" asChild>
                     <Link to="/dashboard">
                       <SquaresFour />
-                      Dashboard
+                      <span className="hidden sm:inline">Dashboard</span>
                     </Link>
                   </Button>
                   <Button size="sm" asChild>

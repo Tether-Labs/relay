@@ -10,6 +10,7 @@ import { canViewArtifact, getArtifactBySlug } from "../lib/permissions.js";
 import type { SessionUser } from "../lib/permissions.js";
 import { sessionMiddleware } from "../middleware/session.js";
 import { viewerHash } from "../lib/email.js";
+import { webLoginForArtifactUrl } from "../lib/artifact-links.js";
 import { getConfig } from "../config.js";
 import { layout } from "../views/templates.js";
 
@@ -50,10 +51,8 @@ async function recordView(
   });
 }
 
-function loginUrl(slug: string): string {
-  const config = getConfig();
-  const artifactUrl = `${config.apiUrl}/a/${slug}`;
-  return `${config.webUrl}/login?next=${encodeURIComponent(artifactUrl)}`;
+function loginUrl(slug: string, email?: string | null): string {
+  return webLoginForArtifactUrl(getConfig().webUrl, slug, email ?? undefined);
 }
 
 view.get("/a/:slug", async (c) => {

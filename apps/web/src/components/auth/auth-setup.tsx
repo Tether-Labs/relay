@@ -11,8 +11,9 @@ export function AuthSetup() {
 
   useEffect(() => {
     if (!isSignedIn) return;
-    void syncApiSession().catch(() => {
-      // Retry on next navigation if API is temporarily unavailable.
+    void syncApiSession().catch((err) => {
+      // Avoid toast spam during Clerk hydration; pages call ensureApiAuth when needed.
+      console.warn("API session sync failed:", err);
     });
   }, [isSignedIn, getToken]);
 

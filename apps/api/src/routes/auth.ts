@@ -20,10 +20,15 @@ auth.use("*", sessionMiddleware);
 
 /** Bridge Clerk JWT → API session cookie (for /a/:slug viewing on the API origin). */
 auth.post("/sync", requireApiSession(), async (c) => {
-  const session = c.get("session");
-  const sessionToken = await createSession(session.userId);
-  setSessionCookie(c, sessionToken);
-  return c.json({ ok: true, email: session.email, userId: session.userId });
+  try {
+    const session = c.get("session");
+    const sessionToken = await createSession(session.userId);
+    setSessionCookie(c, sessionToken);
+    return c.json({ ok: true, email: session.email, userId: session.userId });
+  } catch (err) {
+    console.error("POST /auth/sync failed:", err);
+    return c.json({ error: "Sync failed" }, 500);
+  }
 });
 
 auth.post("/logout", async (c) => {

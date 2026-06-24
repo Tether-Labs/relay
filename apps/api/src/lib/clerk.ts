@@ -1,7 +1,7 @@
 import { createClerkClient, verifyToken } from "@clerk/backend";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { users } from "../db/schema.js";
+import { users, sessions, agentTokens, artifacts, magicTokens } from "../db/schema.js";
 import { getConfig } from "../config.js";
 import { normalizeEmail } from "./email.js";
 import type { SessionUser } from "./permissions.js";
@@ -32,6 +32,18 @@ async function resolveEmail(userId: string, payload: Record<string, unknown>): P
   );
 }
 
+async function migrateUserId(oldId: string, newId: string, email: string, createdAt: number): Promise<void> {
+  const db = getDb();
+  await db.transaction(async (tx) => {
+    await tx.insert(users).values({ id: newId, email, created_at: createdAt });
+    await tx.update(sessions).set({ user_id: newId }).where(eq(sessions.user_id, oldId));
+    await tx.update(agentTokens).set({ user_id: newId }).where(eq(agentTokens.user_id, oldId));
+    await tx.update(artifacts).set({ owner_id: newId }).where(eq(artifacts.owner_id, oldId));
+    await tx.update(magicTokens).set({ user_id: newId }).where(eq(magicTokens.user_id, oldId));
+    await tx.delete(users).where(eq(users.id, oldId));
+  });
+}
+
 export async function verifyClerkBearer(token: string): Promise<SessionUser | null> {
   const config = getConfig();
   if (!config.clerkSecretKey) return null;
@@ -39,7 +51,12 @@ export async function verifyClerkBearer(token: string): Promise<SessionUser | nu
   try {
     const payload = await verifyToken(token, {
       secretKey: config.clerkSecretKey,
-      authorizedParties: [config.webUrl, "http://localhost:5173", "http://127.0.0.1:5173"],
+      authorizedParties: [
+        config.webUrl,
+        ...config.corsOrigins,
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+      ],
     });
 
     const userId = payload.sub;
@@ -49,7 +66,8 @@ export async function verifyClerkBearer(token: string): Promise<SessionUser | nu
     if (!email) return null;
 
     return ensureClerkUser(userId, email);
-  } catch {
+  } catch (err) {
+    console.error("Clerk bearer verification failed:", err);
     return null;
   }
 }
@@ -62,6 +80,14 @@ export async function ensureClerkUser(userId: string, email: string): Promise<Se
   if (byId[0]) {
     if (byId[0].email !== normalized) {
       await db.update(users).set({ email: normalized }).where(eq(users.id, userId));
+    }
+    return { userId, email: normalized };
+  }
+
+  const byEmail = await db.select().from(users).where(eq(users.email, normalized)).limit(1);
+  if (byEmail[0]) {
+    if (byEmail[0].id !== userId) {
+      await migrateUserId(byEmail[0].id, userId, normalized, byEmail[0].created_at);
     }
     return { userId, email: normalized };
   }

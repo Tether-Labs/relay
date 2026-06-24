@@ -9,6 +9,7 @@ import {
   ensureApiAuth,
   listAgentTokens,
   revokeAgentToken,
+  AuthError,
   type AgentTokenRecord,
 } from "@/lib/api";
 import { CURSOR_MCP_CONFIG } from "@/lib/mcp-tools";
@@ -25,7 +26,10 @@ export function AgentTokenSettings() {
     ensureApiAuth()
       .then(() => listAgentTokens())
       .then((data) => setAgentTokens(data.tokens))
-      .catch((e) => toast.error(e instanceof Error ? e.message : "Could not load agent tokens"))
+      .catch((e) => {
+        if (e instanceof AuthError) return;
+        toast.error(e instanceof Error ? e.message : "Could not load agent tokens");
+      })
       .finally(() => setLoading(false));
   }, []);
 

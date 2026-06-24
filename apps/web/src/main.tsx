@@ -25,6 +25,8 @@ createRoot(document.getElementById("root")!).render(
       appearance={{ theme: shadcn }}
       signInUrl="/login"
       signUpUrl="/sign-up"
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
     >
       <AuthSetup />
       <TooltipProvider>
