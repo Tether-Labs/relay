@@ -46,7 +46,12 @@ export const sessionMiddleware = createMiddleware<{
   }
 
   if (!session) {
-    session = await sessionFromBearer(c);
+    try {
+      session = await sessionFromBearer(c);
+    } catch (err) {
+      console.error("Bearer session lookup failed:", err);
+      session = null;
+    }
   }
 
   c.set("session", session);

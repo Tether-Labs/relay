@@ -32,15 +32,18 @@ async function resolveEmail(userId: string, payload: Record<string, unknown>): P
   );
 }
 
-async function migrateUserId(oldId: string, newId: string, email: string, createdAt: number): Promise<void> {
+/** Re-link a pre-Clerk user row (same email, old id) to the Clerk user id. Sync — better-sqlite3 rejects async tx callbacks. */
+function migrateUserId(oldId: string, newId: string, email: string, createdAt: number): void {
   const db = getDb();
-  await db.transaction(async (tx) => {
-    await tx.insert(users).values({ id: newId, email, created_at: createdAt });
-    await tx.update(sessions).set({ user_id: newId }).where(eq(sessions.user_id, oldId));
-    await tx.update(agentTokens).set({ user_id: newId }).where(eq(agentTokens.user_id, oldId));
-    await tx.update(artifacts).set({ owner_id: newId }).where(eq(artifacts.owner_id, oldId));
-    await tx.update(magicTokens).set({ user_id: newId }).where(eq(magicTokens.user_id, oldId));
-    await tx.delete(users).where(eq(users.id, oldId));
+  db.transaction((tx) => {
+    // Release the unique email slot held by the legacy row.
+    tx.update(users).set({ email: `${email}.migrating.${oldId}` }).where(eq(users.id, oldId));
+    tx.insert(users).values({ id: newId, email, created_at: createdAt });
+    tx.update(sessions).set({ user_id: newId }).where(eq(sessions.user_id, oldId));
+    tx.update(agentTokens).set({ user_id: newId }).where(eq(agentTokens.user_id, oldId));
+    tx.update(artifacts).set({ owner_id: newId }).where(eq(artifacts.owner_id, oldId));
+    tx.update(magicTokens).set({ user_id: newId }).where(eq(magicTokens.user_id, oldId));
+    tx.delete(users).where(eq(users.id, oldId));
   });
 }
 
@@ -87,16 +90,32 @@ export async function ensureClerkUser(userId: string, email: string): Promise<Se
   const byEmail = await db.select().from(users).where(eq(users.email, normalized)).limit(1);
   if (byEmail[0]) {
     if (byEmail[0].id !== userId) {
-      await migrateUserId(byEmail[0].id, userId, normalized, byEmail[0].created_at);
+      try {
+        migrateUserId(byEmail[0].id, userId, normalized, byEmail[0].created_at);
+      } catch (err) {
+        console.error("migrateUserId failed:", err);
+        throw err;
+      }
     }
     return { userId, email: normalized };
   }
 
-  await db.insert(users).values({
-    id: userId,
-    email: normalized,
-    created_at: Date.now(),
-  });
+  try {
+    await db.insert(users).values({
+      id: userId,
+      email: normalized,
+      created_at: Date.now(),
+    });
+  } catch (err) {
+    // Race or legacy row created between selects — retry lookup once.
+    const retry = await db.select().from(users).where(eq(users.email, normalized)).limit(1);
+    if (retry[0]?.id === userId) return { userId, email: normalized };
+    if (retry[0] && retry[0].id !== userId) {
+      migrateUserId(retry[0].id, userId, normalized, retry[0].created_at);
+      return { userId, email: normalized };
+    }
+    throw err;
+  }
 
   return { userId, email: normalized };
 }
