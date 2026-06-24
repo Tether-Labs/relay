@@ -1,7 +1,7 @@
 import { createClerkClient, verifyToken } from "@clerk/backend";
-import { eq } from "drizzle-orm";
+import { eq, like, or } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { users, sessions, agentTokens, artifacts, magicTokens } from "../db/schema.js";
+import { users } from "../db/schema.js";
 import { getConfig } from "../config.js";
 import { normalizeEmail } from "./email.js";
 import type { SessionUser } from "./permissions.js";
@@ -20,34 +20,39 @@ function emailFromJwtClaims(payload: Record<string, unknown>): string | null {
   return null;
 }
 
-async function resolveEmail(userId: string, payload: Record<string, unknown>): Promise<string | null> {
-  const fromJwt = emailFromJwtClaims(payload);
-  if (fromJwt) return fromJwt;
-
+async function resolveEmail(
+  userId: string,
+  payload: Record<string, unknown>,
+  preferredEmail?: string | null,
+): Promise<string | null> {
   const user = await getClerkClient().users.getUser(userId);
-  return (
-    user.primaryEmailAddress?.emailAddress ??
-    user.emailAddresses[0]?.emailAddress ??
-    null
-  );
+  const addresses = user.emailAddresses.map((e) => normalizeEmail(e.emailAddress));
+  if (addresses.length === 0) return null;
+
+  if (preferredEmail) {
+    const preferred = normalizeEmail(preferredEmail);
+    if (addresses.includes(preferred)) return preferred;
+  }
+
+  const fromJwt = emailFromJwtClaims(payload);
+  if (fromJwt) {
+    const normalized = normalizeEmail(fromJwt);
+    if (addresses.includes(normalized)) return normalized;
+  }
+
+  const primary = user.primaryEmailAddress?.emailAddress;
+  if (primary) {
+    const normalized = normalizeEmail(primary);
+    if (addresses.includes(normalized)) return normalized;
+  }
+
+  return addresses[0] ?? null;
 }
 
-/** Re-link a pre-Clerk user row (same email, old id) to the Clerk user id. Sync — better-sqlite3 rejects async tx callbacks. */
-function migrateUserId(oldId: string, newId: string, email: string, createdAt: number): void {
-  const db = getDb();
-  db.transaction((tx) => {
-    // Release the unique email slot held by the legacy row.
-    tx.update(users).set({ email: `${email}.migrating.${oldId}` }).where(eq(users.id, oldId));
-    tx.insert(users).values({ id: newId, email, created_at: createdAt });
-    tx.update(sessions).set({ user_id: newId }).where(eq(sessions.user_id, oldId));
-    tx.update(agentTokens).set({ user_id: newId }).where(eq(agentTokens.user_id, oldId));
-    tx.update(artifacts).set({ owner_id: newId }).where(eq(artifacts.owner_id, oldId));
-    tx.update(magicTokens).set({ user_id: newId }).where(eq(magicTokens.user_id, oldId));
-    tx.delete(users).where(eq(users.id, oldId));
-  });
-}
-
-export async function verifyClerkBearer(token: string): Promise<SessionUser | null> {
+export async function verifyClerkBearer(
+  token: string,
+  preferredEmail?: string | null,
+): Promise<SessionUser | null> {
   const config = getConfig();
   if (!config.clerkSecretKey) return null;
 
@@ -65,7 +70,7 @@ export async function verifyClerkBearer(token: string): Promise<SessionUser | nu
     const userId = payload.sub;
     if (!userId) return null;
 
-    const email = await resolveEmail(userId, payload as Record<string, unknown>);
+    const email = await resolveEmail(userId, payload as Record<string, unknown>, preferredEmail);
     if (!email) return null;
 
     return ensureClerkUser(userId, email);
@@ -75,47 +80,46 @@ export async function verifyClerkBearer(token: string): Promise<SessionUser | nu
   }
 }
 
-export async function ensureClerkUser(userId: string, email: string): Promise<SessionUser> {
+/**
+ * Map Clerk sign-in to a Relay user row.
+ * New users get the Clerk user id. Legacy (pre-Clerk) rows keep their existing id
+ * so sessions/artifacts FKs stay valid — no destructive id migration.
+ */
+export async function ensureClerkUser(clerkUserId: string, email: string): Promise<SessionUser> {
   const normalized = normalizeEmail(email);
   const db = getDb();
 
-  const byId = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (byId[0]) {
-    if (byId[0].email !== normalized) {
-      await db.update(users).set({ email: normalized }).where(eq(users.id, userId));
+  const byClerkId = await db.select().from(users).where(eq(users.id, clerkUserId)).limit(1);
+  if (byClerkId[0]) {
+    if (byClerkId[0].email !== normalized) {
+      await db.update(users).set({ email: normalized }).where(eq(users.id, clerkUserId));
     }
-    return { userId, email: normalized };
+    return { userId: clerkUserId, email: normalized };
   }
 
   const byEmail = await db.select().from(users).where(eq(users.email, normalized)).limit(1);
   if (byEmail[0]) {
-    if (byEmail[0].id !== userId) {
-      try {
-        migrateUserId(byEmail[0].id, userId, normalized, byEmail[0].created_at);
-      } catch (err) {
-        console.error("migrateUserId failed:", err);
-        throw err;
-      }
-    }
-    return { userId, email: normalized };
+    return { userId: byEmail[0].id, email: normalized };
   }
 
-  try {
-    await db.insert(users).values({
-      id: userId,
-      email: normalized,
-      created_at: Date.now(),
-    });
-  } catch (err) {
-    // Race or legacy row created between selects — retry lookup once.
-    const retry = await db.select().from(users).where(eq(users.email, normalized)).limit(1);
-    if (retry[0]?.id === userId) return { userId, email: normalized };
-    if (retry[0] && retry[0].id !== userId) {
-      migrateUserId(retry[0].id, userId, normalized, retry[0].created_at);
-      return { userId, email: normalized };
+  // Recover rows left by a failed id-migration attempt.
+  const migrating = await db
+    .select()
+    .from(users)
+    .where(or(eq(users.email, normalized), like(users.email, `${normalized}.migrating.%`)))
+    .limit(1);
+  if (migrating[0]) {
+    if (migrating[0].email !== normalized) {
+      await db.update(users).set({ email: normalized }).where(eq(users.id, migrating[0].id));
     }
-    throw err;
+    return { userId: migrating[0].id, email: normalized };
   }
 
-  return { userId, email: normalized };
+  await db.insert(users).values({
+    id: clerkUserId,
+    email: normalized,
+    created_at: Date.now(),
+  });
+
+  return { userId: clerkUserId, email: normalized };
 }

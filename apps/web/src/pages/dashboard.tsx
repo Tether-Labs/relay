@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth, useUser } from "@clerk/clerk-react";
+import { useUser } from "@clerk/clerk-react";
 import { Globe, Plus, UsersThree } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { CountBadge } from "@/components/ui/badge";
@@ -16,41 +16,87 @@ import {
   listArtifacts,
   type ArtifactRecord,
 } from "@/lib/api";
+import { useClerkSession } from "@/lib/use-clerk-session";
 import { DEFAULT_PAGE_SIZE, usePagination } from "@/lib/pagination";
 
 const ARTIFACTS_PAGE_SIZE = DEFAULT_PAGE_SIZE;
 
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, ready, hasSession } = useClerkSession();
   const { user } = useUser();
   const [owned, setOwned] = useState<ArtifactRecord[]>([]);
   const [sharedWithMe, setSharedWithMe] = useState<ArtifactRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<"auth" | "sync" | null>(null);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    if (!isSignedIn) {
+    if (!ready) return;
+    if (!hasSession) {
       navigate("/login?next=/dashboard");
       return;
     }
+
+    setLoadError(null);
+    setLoading(true);
+
+    const timeout = window.setTimeout(() => {
+      setLoading(false);
+      setLoadError("sync");
+    }, 20000);
 
     ensureApiAuth()
       .then(() => listArtifacts())
       .then((data) => {
         setOwned(data.owned);
         setSharedWithMe(data.sharedWithMe);
+        setLoadError(null);
       })
       .catch((e) => {
-        if (e instanceof AuthError) navigate("/login?next=/dashboard");
+        if (e instanceof AuthError) {
+          setLoadError("auth");
+          return;
+        }
+        setLoadError("sync");
       })
-      .finally(() => setLoading(false));
-  }, [isLoaded, isSignedIn, navigate]);
+      .finally(() => {
+        window.clearTimeout(timeout);
+        setLoading(false);
+      });
+
+    return () => window.clearTimeout(timeout);
+  }, [ready, hasSession, navigate]);
 
   const ownedPagination = usePagination(owned, ARTIFACTS_PAGE_SIZE);
   const sharedPagination = usePagination(sharedWithMe, ARTIFACTS_PAGE_SIZE);
 
-  if (!isLoaded || loading) return <PageLoading />;
+  if (!isLoaded || !ready || loading) return <PageLoading />;
+
+  if (loadError) {
+    return (
+      <PageShell>
+        <div className="mx-auto max-w-md space-y-4 px-6 py-20 text-center">
+          <h1 className="font-heading text-xl font-semibold">
+            {loadError === "auth" ? "Session expired" : "Couldn&apos;t load dashboard"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {loadError === "auth"
+              ? "Sign in again to view your artifacts."
+              : "Check your connection and try again. Mobile networks can be slow on first load."}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {loadError === "auth" ? (
+              <Button asChild>
+                <Link to="/login?next=/dashboard">Sign in</Link>
+              </Button>
+            ) : (
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            )}
+          </div>
+        </div>
+      </PageShell>
+    );
+  }
 
   const email = user?.primaryEmailAddress?.emailAddress;
   const profileHandle = email ? emailToHandle(email) : null;

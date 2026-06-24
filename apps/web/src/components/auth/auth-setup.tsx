@@ -1,21 +1,27 @@
 import { useEffect } from "react";
-import { useAuth } from "@clerk/clerk-react";
-import { setAuthTokenGetter, syncApiSession } from "@/lib/api";
+import { useAuth, useUser } from "@clerk/clerk-react";
+import { setAuthTokenGetter, setRelayEmailGetter, syncApiSession } from "@/lib/api";
 
 export function AuthSetup() {
-  const { isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { user } = useUser();
 
   useEffect(() => {
+    if (!isLoaded) return;
     setAuthTokenGetter(() => getToken());
-  }, [getToken]);
+  }, [isLoaded, getToken]);
 
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!isLoaded) return;
+    setRelayEmailGetter(() => user?.primaryEmailAddress?.emailAddress ?? null);
+  }, [isLoaded, user?.primaryEmailAddress?.emailAddress]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
     void syncApiSession().catch((err) => {
-      // Avoid toast spam during Clerk hydration; pages call ensureApiAuth when needed.
       console.warn("API session sync failed:", err);
     });
-  }, [isSignedIn, getToken]);
+  }, [isLoaded, isSignedIn, getToken, user?.primaryEmailAddress?.emailAddress]);
 
   return null;
 }

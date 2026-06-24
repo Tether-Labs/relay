@@ -95,9 +95,14 @@ export function emailToHandle(email: string): string {
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3847").replace(/\/$/, "");
 
 let authTokenGetter: (() => Promise<string | null>) | null = null;
+let relayEmailGetter: (() => string | null) | null = null;
 
 export function setAuthTokenGetter(getter: () => Promise<string | null>) {
   authTokenGetter = getter;
+}
+
+export function setRelayEmailGetter(getter: () => string | null) {
+  relayEmailGetter = getter;
 }
 
 function apiPath(path: string): string {
@@ -111,10 +116,15 @@ export function getArtifactViewUrl(slug: string): string {
 async function authHeaders(): Promise<Record<string, string>> {
   if (!authTokenGetter) return {};
 
-  for (let attempt = 0; attempt < 20; attempt++) {
+  for (let attempt = 0; attempt < 40; attempt++) {
     const token = await authTokenGetter();
-    if (token) return { Authorization: `Bearer ${token}` };
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    if (token) {
+      const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+      const email = relayEmailGetter?.();
+      if (email) headers["X-Relay-Email"] = email;
+      return headers;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   return {};
@@ -204,6 +214,28 @@ export async function revokeAgentToken(id: string): Promise<{ ok: boolean }> {
   return api(`/auth/agent-tokens/${id}`, {
     method: "DELETE",
   });
+}
+
+export async function getAuthenticatedArtifactViewUrl(slug: string): Promise<string> {
+  const { url } = await api<{ url: string }>(`/api/artifacts/${slug}/view-url`, {
+    method: "POST",
+  });
+  return url;
+}
+
+export async function canViewArtifact(slug: string): Promise<boolean> {
+  const data = await api<{ canView: boolean }>(`/api/artifacts/${slug}/can-view`);
+  return data.canView;
+}
+
+export async function fetchArtifactPreviewHtml(slug: string): Promise<string> {
+  const res = await fetch(apiPath(`/api/artifacts/${slug}/preview`), {
+    credentials: "include",
+    headers: await authHeaders(),
+  });
+  if (res.status === 403) throw new Error("Access restricted");
+  if (!res.ok) throw new Error(`Preview failed (${res.status})`);
+  return res.text();
 }
 
 export async function listArtifacts(): Promise<{

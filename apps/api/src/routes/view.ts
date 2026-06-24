@@ -1,22 +1,43 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
-import { artifactViews } from "../db/schema.js";
+import { artifactViews, users } from "../db/schema.js";
 import { newId } from "../lib/id.js";
 import { readArtifactFile } from "../lib/storage.js";
 import { isMarkdownFilename } from "../lib/artifact-files.js";
 import { renderMarkdownDocument } from "../lib/markdown.js";
 import { canViewArtifact, getArtifactBySlug } from "../lib/permissions.js";
 import type { SessionUser } from "../lib/permissions.js";
-import { sessionMiddleware } from "../middleware/session.js";
+import { createSession, sessionMiddleware, setSessionCookie } from "../middleware/session.js";
 import { viewerHash } from "../lib/email.js";
 import { webLoginForArtifactUrl } from "../lib/artifact-links.js";
+import { verifyViewToken } from "../lib/view-token.js";
 import { getConfig } from "../config.js";
 import { layout } from "../views/templates.js";
 
 const view = new Hono<{ Variables: { session: SessionUser | null } }>();
 
 view.use("*", sessionMiddleware);
+
+async function resolveViewSession(c: Context, slug: string): Promise<SessionUser | null> {
+  const existing = c.get("session");
+  if (existing) return existing;
+
+  const viewToken = c.req.query("view_token");
+  if (!viewToken) return null;
+
+  const claims = verifyViewToken(viewToken, slug);
+  if (!claims) return null;
+
+  const db = getDb();
+  const [user] = await db.select().from(users).where(eq(users.id, claims.userId)).limit(1);
+  if (!user) return null;
+
+  const session: SessionUser = { userId: user.id, email: user.email };
+  const sessionToken = await createSession(user.id);
+  setSessionCookie(c, sessionToken);
+  return session;
+}
 
 function footer(): string {
   const config = getConfig();
@@ -55,26 +76,39 @@ function loginUrl(slug: string, email?: string | null): string {
   return webLoginForArtifactUrl(getConfig().webUrl, slug, email ?? undefined);
 }
 
+function accessDeniedHtml(slug: string, session: SessionUser | null): string {
+  const login = loginUrl(slug);
+  const signedInNote = session
+    ? `<p>Signed in as <strong>${session.email}</strong>. This invite may be tied to a different email — sign out and try again.</p>`
+    : `<p><a href="${login}">Sign in</a> with an invited email.</p>`;
+  return layout(
+    "Access restricted",
+    `<h1>Access restricted</h1><p>This experience is only visible to invited viewers.</p>${signedInNote}`,
+  );
+}
+
+function denyArtifactView(
+  c: { html: (body: string, status?: number) => Response; redirect: (url: string) => Response },
+  slug: string,
+  session: SessionUser | null,
+): Response {
+  if (!session) {
+    return c.redirect(loginUrl(slug));
+  }
+  return c.html(accessDeniedHtml(slug, session), 403);
+}
+
 view.get("/a/:slug", async (c) => {
   const slug = c.req.param("slug");
   const artifact = await getArtifactBySlug(slug);
 
   if (!artifact) return c.text("Experience not found", 404);
 
-  const session = c.get("session");
+  const session = await resolveViewSession(c, slug);
   const allowed = await canViewArtifact(artifact, session, session?.email ?? null);
 
   if (!allowed) {
-    if (artifact.visibility === "private" || artifact.visibility === "restricted") {
-      return c.redirect(loginUrl(slug));
-    }
-    return c.html(
-      layout(
-        "Access restricted",
-        `<h1>Access restricted</h1><p>This experience is only visible to invited viewers.</p><p><a href="${loginUrl(slug)}">Sign in</a> with an invited email.</p>`,
-      ),
-      403,
-    );
+    return denyArtifactView(c, slug, session);
   }
 
   const file = readArtifactFile(slug, artifact.entry_file);
@@ -97,9 +131,9 @@ view.get("/a/:slug/*", async (c) => {
 
   if (!artifact) return c.text("Not found", 404);
 
-  const session = c.get("session");
+  const session = await resolveViewSession(c, slug);
   const allowed = await canViewArtifact(artifact, session, session?.email ?? null);
-  if (!allowed) return c.redirect(loginUrl(slug));
+  if (!allowed) return denyArtifactView(c, slug, session);
 
   const file = readArtifactFile(slug, filePath);
   if (!file) return c.text("Not found", 404);

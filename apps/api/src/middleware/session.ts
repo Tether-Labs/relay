@@ -26,31 +26,40 @@ async function sessionFromCookie(token: string): Promise<SessionUser | null> {
   return rows[0] ?? null;
 }
 
-async function sessionFromBearer(c: { req: { header: (name: string) => string | undefined } }): Promise<SessionUser | null> {
+async function sessionFromBearer(c: {
+  req: { header: (name: string) => string | undefined };
+}): Promise<SessionUser | null> {
   const authHeader = c.req.header("authorization");
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
   if (!token) return null;
   const agentSession = await sessionFromAgentToken(token);
   if (agentSession) return agentSession;
-  return verifyClerkBearer(token);
+  const preferredEmail = c.req.header("x-relay-email");
+  return verifyClerkBearer(token, preferredEmail);
 }
 
 export const sessionMiddleware = createMiddleware<{
   Variables: { session: SessionUser | null };
 }>(async (c, next) => {
-  const token = getCookie(c, COOKIE_NAME);
+  const authHeader = c.req.header("authorization");
+  const hasBearer = Boolean(authHeader?.startsWith("Bearer ") && authHeader.slice(7).trim());
+
   let session: SessionUser | null = null;
 
-  if (token) {
-    session = await sessionFromCookie(token);
-  }
-
-  if (!session) {
+  // Clerk JWT reflects the active sign-in; cookie may be stale after switching accounts.
+  if (hasBearer) {
     try {
       session = await sessionFromBearer(c);
     } catch (err) {
       console.error("Bearer session lookup failed:", err);
       session = null;
+    }
+  }
+
+  if (!session) {
+    const token = getCookie(c, COOKIE_NAME);
+    if (token) {
+      session = await sessionFromCookie(token);
     }
   }
 

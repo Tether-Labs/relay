@@ -1,7 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { Key, Plus, SquaresFour } from "@phosphor-icons/react";
+import { Loader2 } from "lucide-react";
 import {
   ClerkLoaded,
+  ClerkLoading,
   SignedIn,
   SignedOut,
   SignInButton,
@@ -22,6 +24,9 @@ export function AppHeader() {
           Relay
         </Link>
         <nav className="flex items-center gap-2">
+          <ClerkLoading>
+            <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Loading account" />
+          </ClerkLoading>
           <ClerkLoaded>
             <SignedIn>
               {!isDashboard && (

@@ -11,9 +11,11 @@ import {
 } from "../db/schema.js";
 import { newId, newSlug } from "../lib/id.js";
 import { saveHtmlFile, extractZip } from "../lib/storage.js";
-import { isSupportedArtifactUpload, isZipFilename } from "../lib/artifact-files.js";
+import { isSupportedArtifactUpload, isZipFilename, isMarkdownFilename } from "../lib/artifact-files.js";
+import { readArtifactFile } from "../lib/storage.js";
+import { renderMarkdownDocument } from "../lib/markdown.js";
 import { sessionMiddleware, requireApiSession } from "../middleware/session.js";
-import { getArtifactBySlug } from "../lib/permissions.js";
+import { canViewArtifact, getArtifactBySlug } from "../lib/permissions.js";
 import { sendInviteLink, normalizeEmail } from "../lib/email.js";
 import { webLoginForArtifactUrl } from "../lib/artifact-links.js";
 import {
@@ -23,6 +25,7 @@ import {
 } from "../lib/artifact-analytics.js";
 import { getConfig } from "../config.js";
 import type { SessionUser } from "../lib/permissions.js";
+import { createViewToken } from "../lib/view-token.js";
 
 const api = new Hono<{ Variables: { session: SessionUser | null } }>();
 
@@ -141,6 +144,48 @@ api.post("/artifacts", async (c) => {
 
   const url = `${getConfig().apiUrl}/a/${slug}`;
   return c.json({ slug, url, title, visibility }, 201);
+});
+
+api.get("/artifacts/:slug/can-view", async (c) => {
+  const session = c.get("session")!;
+  const artifact = await getArtifactBySlug(c.req.param("slug"));
+  if (!artifact) return c.json({ canView: false }, 404);
+
+  const canView = await canViewArtifact(artifact, session, session.email);
+  return c.json({ canView });
+});
+
+api.post("/artifacts/:slug/view-url", async (c) => {
+  const session = c.get("session")!;
+  const slug = c.req.param("slug");
+  const artifact = await getArtifactBySlug(slug);
+  if (!artifact) return c.json({ error: "Not found" }, 404);
+
+  const allowed = await canViewArtifact(artifact, session, session.email);
+  if (!allowed) return c.json({ error: "Forbidden" }, 403);
+
+  const viewToken = createViewToken(slug, session.userId);
+  const url = `${getConfig().apiUrl}/a/${slug}?view_token=${encodeURIComponent(viewToken)}`;
+  return c.json({ url });
+});
+
+api.get("/artifacts/:slug/preview", async (c) => {
+  const session = c.get("session")!;
+  const slug = c.req.param("slug");
+  const artifact = await getArtifactBySlug(slug);
+  if (!artifact) return c.json({ error: "Not found" }, 404);
+
+  const allowed = await canViewArtifact(artifact, session, session.email);
+  if (!allowed) return c.json({ error: "Access restricted" }, 403);
+
+  const file = readArtifactFile(slug, artifact.entry_file);
+  if (!file) return c.json({ error: "Missing file" }, 500);
+
+  const source = file.toString("utf8");
+  const html = isMarkdownFilename(artifact.entry_file)
+    ? renderMarkdownDocument(artifact.title, source)
+    : source;
+  return c.html(html);
 });
 
 api.get("/artifacts/:slug", async (c) => {

@@ -28,6 +28,7 @@ app.use(
   cors({
     origin: (origin) => (origin && allowedOrigins.includes(origin) ? origin : config.webUrl),
     credentials: true,
+    allowHeaders: ["Authorization", "Content-Type", "X-Relay-Email"],
   }),
 );
 app.use(
@@ -35,6 +36,7 @@ app.use(
   cors({
     origin: (origin) => (origin && allowedOrigins.includes(origin) ? origin : config.webUrl),
     credentials: true,
+    allowHeaders: ["Authorization", "Content-Type", "X-Relay-Email"],
   }),
 );
 
